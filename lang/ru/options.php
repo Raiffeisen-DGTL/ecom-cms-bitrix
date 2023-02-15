@@ -1,0 +1,4 @@
+<?
+$MESS["KITNET_FOLDERSIZES_OSNOVNOE"] = "Основное";
+$MESS["KITNET_FOLDERSIZES_SOHRANITQ"] = "Сохранить";
+?>

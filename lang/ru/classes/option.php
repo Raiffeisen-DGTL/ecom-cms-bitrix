@@ -1,0 +1,4 @@
+<?
+$MESS["KITNET_FOLDERSIZES_VREMA_KESIROVANIA"] = "Стили";
+
+?>
