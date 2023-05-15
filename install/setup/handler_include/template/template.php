@@ -16,14 +16,13 @@ Loc::loadMessages(__FILE__);
 
 $_SERVER["SERVER_NAME"] = 'https://' . SITE_SERVER_NAME;
 
-if (array_key_exists('PAYMENT_SHOULD_PAY', $params))
-    {
+if (array_key_exists('PAYMENT_SHOULD_PAY', $params)) {
     $params['PAYMENT_SHOULD_PAY'] = PriceMaths::roundPrecision($params['PAYMENT_SHOULD_PAY']);
-    }
+}
 
 // $formStyles=file_get_contents($_SERVER['DOCUMENT_ROOT'].$params["SELLER_STYLES"]);
 
-$formStyles                   = Option::get('raiffeizenpay', 'FORM_STYLE');
+$formStyles = Option::get('raiffeizenpay', 'FORM_STYLE');
 
 /*
 $formStyles=explode("style: ",$formStyles);
@@ -32,28 +31,26 @@ $formStyles=explode("successSbpUrl",$formStyles);
 $formStyles=$formStyles[0];
 */
 
-$order                        = Sale\Order::load($_GET["ORDER_ID"]);
-$userID                       = $order->getUserId();
-$userName                     = \Bitrix\Main\Engine\CurrentUser::get()->getFullName();
-$userEmail                    = \Bitrix\Main\Engine\CurrentUser::get()->getEmail();
-$paySum                       = $order->getPrice();
-$orderID                      = $order->getId();
+$order     = Sale\Order::load($_GET["ORDER_ID"]);
+$userID    = $order->getUserId();
+$userName  = \Bitrix\Main\Engine\CurrentUser::get()->getFullName();
+$userEmail = \Bitrix\Main\Engine\CurrentUser::get()->getEmail();
+$paySum    = $order->getPrice();
+$orderID   = $order->getId();
 
-$receipt                      = [];
+$receipt = [];
 
 $receipt["receiptNumber"]     = $orderID;
 $receipt["customer"]["email"] = $userEmail;
 //$receipt["customer"]["name"] = $userName;
 
-if ($params['SELLER_FISCALIZATION'] === 'on')
-    {
-    $basket      = $order->getBasket();
+if ($params['SELLER_FISCALIZATION'] === 'on') {
+    $basket = $order->getBasket();
 
     $basketItems = $basket->getBasketItems();
     $bItems      = [];
 
-    foreach ($basketItems as $item)
-        {
+    foreach ($basketItems as $item) {
         $bItems[] = [
             "name"            => $item->getField('NAME'),
             "price"           => $item->getField('PRICE'),
@@ -65,10 +62,9 @@ if ($params['SELLER_FISCALIZATION'] === 'on')
             //"nomenclatureCode" => $item->getField('PRODUCT_XML_ID'),
             "vatType"         => ("VAT" . $params["SELLER_VAT"])
         ];
-        }
+    }
 
-    if ($order->getDeliveryPrice() > 0)
-        {
+    if ($order->getDeliveryPrice() > 0) {
         $bItems[] = [
             "name"     => 'Доставка',
             "price"    => $order->getDeliveryPrice(),
@@ -76,10 +72,10 @@ if ($params['SELLER_FISCALIZATION'] === 'on')
             "amount"   => $order->getDeliveryPrice(),
             "vatType"  => ("VAT" . $params["SELLER_VAT"])
         ];
-        }
+    }
 
     $receipt["items"] = $bItems;
-    }
+}
 
 /*
 $receipt["payments"][] = [
@@ -146,9 +142,9 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
     <form method="POST" name="redirectToAcsForm" id="form" target="_blank" style="display: none">
         <input name="amount" id="amount" value="<?= $paySum ?>" type="hidden" />
         <input name="orderId" id="orderId" value="<?= $orderID ?>" id="order" type="hidden" />
-        <input name="successUrl" id="successUrl" value="<?=($_SERVER["SERVER_NAME"] . $params['BACK_URI_SUCCESS']) ?>"
+        <input name="successUrl" id="successUrl" value="<?= ($_SERVER["SERVER_NAME"] . $params['BACK_URI_SUCCESS']) ?>"
             type="hidden" />
-        <input name="failUrl" id="failUrl" value="<?=($_SERVER["SERVER_NAME"] . $params['BACK_URI_FAIL']) ?>"
+        <input name="failUrl" id="failUrl" value="<?= ($_SERVER["SERVER_NAME"] . $params['BACK_URI_FAIL']) ?>"
             type="hidden" />
         <input name="publicId" id="publicId" value="<?= $params["SELLER_PUBLIC_ID"] ?>" type="hidden" />
         <input name="paymentMethod" id="paymentMethod" value="<?= $params["SELLER_METHOD"] ?>" type="hidden" />
@@ -181,6 +177,7 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                     targetElem: null, url: "<?= $params['TEST_MODE'] === 'yes' ? "https://pay-test.raif.ru/pay" : 'https://pay.raif.ru/pay' ?>"
                 });
 
+
                 <? if ($params['OPEN_ON_NEW_PAGE'] == 'no'): ?>
                     paymentPage.openPopup({
                         amount: parseInt(paymentData.amount),
@@ -197,10 +194,11 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                         expirationDate: paymentData.expirationDate,
                     })
                         .then(function (result) {
-                            window.location.reload();
+                            console.log('payment result', result);
+                            window.location = paymentData.successUrl;
                         })
-                        .catch(function (result) {
-                            console.log('reject', result);
+                        .catch(function (error) {
+                            console.error('reject', error);
                         });
                 <? endif; ?>
                 <? if ($params['OPEN_ON_NEW_PAGE'] == 'yes'): ?>
@@ -237,8 +235,6 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                 const receiptString = document.getElementById('receipt').value; // нужен для того, чтобы зарегистрировать чек
                 //const styleString = document.getElementById('style').value; // мерч может сам настроить стилизацию
                 const styleString = JSON.stringify(styleForm);
-                console.log(styleForm);
-                console.log(styleString);
                 const result = {
                     amount: parseInt(document.getElementById('amount').value), // цена
                     orderId: document.getElementById('orderId').value, // номер заказа
@@ -258,7 +254,7 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                 result.receipt = receiptString ? JSON.parse(receiptString) : '';
 
                 result.style = styleString ? JSON.parse(styleString) : '';
-                console.log(result);
+                console.log('getPaymentData', result);
                 return result;
             };
 

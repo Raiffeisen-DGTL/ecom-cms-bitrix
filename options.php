@@ -1,10 +1,9 @@
 <?
 $module_id = "raiffeizenpay";
 
-if (!$USER->CanDoOperation($module_id))
-	{
+if (!$USER->CanDoOperation($module_id)) {
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
-	}
+}
 
 CModule::IncludeModule($module_id);
 
@@ -17,37 +16,31 @@ $arAllOptions = array(
 $aTabs        = array();
 $aTabs[]      = array("DIV" => "edit0", "TAB" => "Настройки", "ICON" => "seo_settings", "TITLE" => "Настройки");
 
-$tabControl   = new CAdminTabControl("tabControl", $aTabs);
+$tabControl = new CAdminTabControl("tabControl", $aTabs);
 
-if ($REQUEST_METHOD == "POST" && strlen($Update . $Apply . $RestoreDefaults) > 0 && check_bitrix_sessid())
-	{
-	if (strlen($RestoreDefaults) > 0)
-		{
+if ($REQUEST_METHOD == "POST" && strlen($Update . $Apply . $RestoreDefaults) > 0 && check_bitrix_sessid()) {
+	if (strlen($RestoreDefaults) > 0) {
 		COption::RemoveOption($module_id);
 
 		$z = CGroup::GetList($v1 = "id", $v2 = "asc", array("ACTIVE" => "Y", "ADMIN" => "N"));
 		while ($zr = $z->Fetch())
 			$APPLICATION->DelGroupRight($module_id, array($zr["ID"]));
-		}
-	else
-		{
-		foreach ($arAllOptions as $arOption)
-			{
+	} else {
+		foreach ($arAllOptions as $arOption) {
 			$name = $arOption[0];
 			$val  = $_POST[$name];
 			if ($arOption[2][0] == "checkbox" && $val != "Y")
 				$val = "N";
-			if ($name == 'FORM_STYLE')
-				{
+			if ($name == 'FORM_STYLE') {
 				$val = preg_replace('/(.*style: )/s', '', $val);
 				$val = preg_replace('/(.*?}\s)(.*;)/s', '$1', $val);
 				$val = preg_replace('/(\w+):/s', '"$1":', $val);
-				}
+			}
 
 			COption::SetOptionString($module_id, $name, $val, $arOption[1]);
-			}
 		}
 	}
+}
 
 $tabControl->Begin();
 ?>
