@@ -5,22 +5,22 @@ Bitrix\Sale\PaySystem;
 
 Loc::loadMessages(__FILE__);
 
-$isAvailable   = PaySystem\Manager::HANDLER_AVAILABLE_TRUE;
+$isAvailable = PaySystem\Manager::HANDLER_AVAILABLE_TRUE;
 
 $licensePrefix = Loader::includeModule('bitrix24') ? \CBitrix24::getLicensePrefix() : "";
 $portalZone    = Loader::includeModule('intranet') ? CIntranetUtils::getPortalZone() : "";
 
-if (Loader::includeModule("bitrix24"))
-    {
-    if ($licensePrefix !== 'ru')
-        {
+if (Loader::includeModule("bitrix24")) {
+    if ($licensePrefix !== 'ru') {
         $isAvailable = PaySystem\Manager::HANDLER_AVAILABLE_FALSE;
-        }
     }
-elseif (Loader::includeModule('intranet') && $portalZone !== 'ru')
-    {
+} elseif (Loader::includeModule('intranet') && $portalZone !== 'ru') {
     $isAvailable = PaySystem\Manager::HANDLER_AVAILABLE_FALSE;
-    }
+}
+
+$description = array(
+    'MAIN' => 'Изменить стиль формы оплаты можно перейдя в Настройки -> Настройки продукта -> Настройки модулей -> ' . '<a href="/bitrix/admin/settings.php?lang=ru&mid=raiffeizenpay" target="_blank">Прием платежей Raiffeisen</a>'
+);
 
 $data = array(
     'NAME'         => Loc::getMessage('SALE_HPS_RAIF_TITLE'),
@@ -43,10 +43,10 @@ $data = array(
             ],
         ),
         "SELLER_CALLBACK"      => array(
-            "NAME"    => Loc::getMessage('SALE_HPS_RAIF_CALLBACK'),
-            "SORT"    => 300,
-            'GROUP'   => 'SELLER_COMPANY',
-            'DEFAULT' => [
+            "NAME"     => Loc::getMessage('SALE_HPS_RAIF_CALLBACK'),
+            "SORT"     => 300,
+            'GROUP'    => 'SELLER_COMPANY',
+            'DEFAULT'  => [
                 'PROVIDER_VALUE' => 'https://' . $_SERVER['SERVER_NAME'] . '/local/php_interface/include/sale_payment/raiffeizenpay/callback.php',
                 'PROVIDER_KEY'   => 'VALUE',
             ],
@@ -132,21 +132,12 @@ $data = array(
                 "PROVIDER_KEY"   => "INPUT"
             ]
         ),
-        "SELLER_STYLES"        => array(
-            "NAME"     => Loc::getMessage('SALE_HPS_RAIF_STYLES'),
-            "SORT"     => 700,
-            'GROUP'    => 'SELLER_COMPANY',
-            "INPUT"    => [
-                "TYPE" => "TEXT111",
-            ],
-            'DISABLED' => 'Y',
-        ),
         "BACK_URI_SUCCESS"     => array(
             "NAME"    => Loc::getMessage('SALE_HPS_RAIF_BACK_URI_SUCCESS'),
             "SORT"    => 300,
             'GROUP'   => 'SELLER_COMPANY',
             'DEFAULT' => [
-                'PROVIDER_VALUE' => '',
+                'PROVIDER_VALUE' => '/personal/orders/',
                 'PROVIDER_KEY'   => 'VALUE',
             ],
             'INPUT'   => [
@@ -159,7 +150,7 @@ $data = array(
             "SORT"    => 300,
             'GROUP'   => 'SELLER_COMPANY',
             'DEFAULT' => [
-                'PROVIDER_VALUE' => '',
+                'PROVIDER_VALUE' => '/personal/orders/',
                 'PROVIDER_KEY'   => 'VALUE',
             ],
             'INPUT'   => [
