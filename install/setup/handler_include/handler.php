@@ -13,8 +13,11 @@ use Bitrix\Sale\Payment;
 use Bitrix\Main\Loader;
 
 class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem\IRefund
-    {
+{
     private $vat;
+    private $debug;
+    private $secretKey;
+    private $publicKey;
 
     /**
      * Process request after payment.
@@ -30,22 +33,21 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \ErrorException
      */
     public function processRequest(\Bitrix\Sale\Payment $payment, Request $request)
-        {
+    {
         $result = new ServiceResult();
         $action = $request->get('qiwi');
         $this->log('NOTIFY_PROCESS_REQUEST', ['method' => 'processRequest', 'data' => $result->getData()]);
-        switch ($action)
-            {
+        switch ($action) {
             case 'success':
                 $result = $this->processSuccessAction($payment, $request);
                 break;
             case 'notify':
                 $result = $this->processNotifyAction($payment);
                 break;
-            }
+        }
 
         return $result;
-        }
+    }
 
     /**
      * Refundable.
@@ -53,9 +55,9 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @return bool
      */
     public function isRefundableExtended()
-        {
+    {
         return true;
-        }
+    }
 
 
     /**
@@ -64,48 +66,44 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @return array
      */
     public static function getIndicativeFields()
-        {
+    {
         return ['transaction'];
-        }
+    }
     /**
      * @param Sale\Payment $payment
      * @param Request|null $request
      * @return PaySystem\ServiceResult
      */
     public function initiatePay(Sale\Payment $payment, Request $request = null)
-        {
+    {
         return $this->showTemplate($payment, "template");
-        }
+    }
 
     public function getPaymentIdFromRequest(Request $request)
-        {
+    {
         $pid = $request->get('id');
-        if ($pid)
-            {
+        if ($pid) {
             return $pid;
-            }
+        }
         $body = file_get_contents('php://input');
-        if ($body)
-            {
+        if ($body) {
             $reqData = Json::decode($body);
-            }
+        }
         // Log notifies from ...
         $this->log('NOTIFY', ['pid' => $pid, 'reqData' => $body]);
-        if (isset($reqData) && isset($reqData['transaction']['i	d']))
-            {
+        if (isset($reqData) && isset($reqData['transaction']['i	d'])) {
             $pid = $reqData['transaction']['id'];
-            if (!$pid)
-                {
+            if (!$pid) {
                 http_response_code(404);
                 die();
-                }
+            }
 
             return $pid;
-            }
+        }
 
         http_response_code(404);
         die();
-        }
+    }
 
     /**
      * Check order status.
@@ -119,17 +117,14 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \ErrorException
      */
     public function check(Payment $payment)
-        {
+    {
         $result = new ServiceResult();
         $this->initialise($payment);
         $billInfo = true;
 
-        if ($result->isSuccess())
-            {
-            if ($billInfo)
-                {
-                switch ($billInfo['status']['value'])
-                    {
+        if ($result->isSuccess()) {
+            if ($billInfo) {
+                switch ($billInfo['status']['value']) {
                     case 'PAID':
                         $result->setOperationType(ServiceResult::MONEY_COMING);
                         break;
@@ -138,22 +133,20 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
                     case 'EXPIRED':
                         $result->setOperationType(ServiceResult::MONEY_LEAVING);
                         break;
-                    }
-                //$psData['PS_STATUS_CODE'] = $billInfo['status']['value'];
                 }
+                //$psData['PS_STATUS_CODE'] = $billInfo['status']['value'];
             }
+        }
 
-        if (isset($psData))
-            {
+        if (isset($psData)) {
             $result->setPsData($psData);
-            }
-        if (isset($data))
-            {
+        }
+        if (isset($data)) {
             $result->setData($data);
-            }
+        }
 
         return $result;
-        }
+    }
 
     /**
      * Process request after payment.
@@ -169,24 +162,23 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \ErrorException
      */
     public function processRequestCustom(\Bitrix\Sale\PaySystem\Service $payment, Request $request)
-        {
+    {
         $result = new ServiceResult();
-        $action = $request->get('transaction')['status']['value']; 
+        $action = $request->get('transaction')['status']['value'];
         Diag\Debug::dumpToFile($payment, "PS", '/upload/logs.log');
         Diag\Debug::dumpToFile($request->get('transaction'), "GET_0", '/upload/logs.log');
 
-        switch ($action)
-            {
+        switch ($action) {
             case 'SUCCESS':
                 $result = $this->processSuccessAction($payment, $request);
                 break;
             case 'notify':
                 $result = $this->processNotifyAction($payment);
                 break;
-            }
+        }
 
         return $result;
-        }
+    }
 
     /**
      * @param  Payment  $payment
@@ -200,30 +192,26 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \ErrorException
      */
     public function processSuccessAction(\Bitrix\Sale\PaySystem\Service $payment, Request $request)
-        {
+    {
         $result = new ServiceResult();
         //$this->initialise($payment);
         Diag\Debug::dumpToFile($request->get("transaction"), "GET", '/upload/logs.log');
 
 
         $billInfo = true; //$this->checkBill($payment->getField('PS_INVOICE_ID'), $result);
-        if ( /*$result->isSuccess()*/true)
-            {
+        if ( /*$result->isSuccess()*/true) {
             //if ($billInfo) {
 
-            switch ($request->get("transaction")['status']['value'])
-                {
+            switch ($request->get("transaction")['status']['value']) {
                 case 'SUCCESS':
                     $order = Sale\Order::load($request->get("transaction")['orderId']);
                     $paymentCollection = $order->getPaymentCollection();
-                    foreach ($paymentCollection as $_payment_)
-                        {
+                    foreach ($paymentCollection as $_payment_) {
                         $sum  = $_payment_->getSum(); // сумма к оплате
 
                         $psID = $_payment_->getPaymentSystemId();
 
-                        if ($psID == $payment->getField('PAY_SYSTEM_ID') && $sum == $request->get("transaction")['amount'])
-                            {
+                        if ($psID == $payment->getField('PAY_SYSTEM_ID') && $sum == $request->get("transaction")['amount']) {
                             $_payment_->setPaid("Y");
                             //$setField = $_payment_->setField('PS_INVOICE_ID', $request->get("transaction")['id']);
                             //                    if ($setField->isSuccess()) {
@@ -231,34 +219,30 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
                             //                    }
                             $order->setField('STATUS_ID', 'P');
                             $order->save();
-                            }
-
                         }
+                    }
                     break;
                 case 'WAITING':
                 case 'REJECTED':
                 case 'EXPIRED':
                     $result->setOperationType(ServiceResult::MONEY_LEAVING);
                     break;
-                }
+            }
             //$psData['PS_STATUS_CODE'] = $billInfo['status']['value'];
-            if ($request->get('back'))
-                {
+            if ($request->get('back')) {
                 $data['BACK_URL'] = urldecode($request->get('back'));
-                }
+            }
             //}
-            }
-        if (isset($psData))
-            {
+        }
+        if (isset($psData)) {
             $result->setPsData($psData);
-            }
-        if (isset($data))
-            {
+        }
+        if (isset($data)) {
             $result->setData($data);
-            }
+        }
 
         return $result;
-        }
+    }
 
     /**
      * @param  Payment  $payment
@@ -267,7 +251,7 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \ErrorException
      */
     public function processNotifyAction(Bitrix\Sale\PaySystem\Service $payment)
-        {
+    {
         /*$this->initialise($payment);
         $body = file_get_contents('php://input');
         if ($body) {
@@ -298,7 +282,7 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
         $result->setData(['NOTIFY' => ['CODE' => 200]]);
         $this->log('NOTIFY_STEP_3', ['method' => 'processNotifyAction', 'data' => $result->isSuccess()]);
         return $result;*/
-        }
+    }
 
     /**
      * Sets header and prints json encoded data, then dies.
@@ -309,12 +293,12 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \Bitrix\Main\ArgumentException
      */
     public function sendJsonResponse($data = [], $code = 200)
-        {
+    {
         http_response_code($code);
         header('Content-Type: application/json');
         header('Pragma: no-cache');
         die(Json::encode($data));
-        }
+    }
 
     /**
      * Init api.
@@ -324,12 +308,14 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \ErrorException
      */
     protected function initialise($orderPpayment)
-        {
+    {
+        $sellerVat = $this->getBusinessValue($orderPpayment, 'SELLER_VAT');
+
         $this->debug     = $this->getBusinessValue($orderPpayment, 'TEST_MODE');
         $this->secretKey = $this->getBusinessValue($orderPpayment, 'SELLER_SECRET');
         $this->publicKey = $this->getBusinessValue($orderPpayment, 'SELLER_PUBLIC_ID');
-        $this->vat       = 'VAT' . $this->getBusinessValue($orderPpayment, 'SELLER_VAT');
-        }
+        $this->vat       = $sellerVat === "NONE" ? "NONE" : ("VAT" . $sellerVat);
+    }
 
     /**
      * Final function that sends response or redirects user to payment page.
@@ -340,41 +326,35 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \Bitrix\Main\ArgumentException
      */
     public function sendResponse(ServiceResult $result, Request $request)
-        {
+    {
         global $APPLICATION;
         $APPLICATION->RestartBuffer();
         $data = $result->getData();
-        if ($data['NOTIFY']['CODE'])
-            {
-            switch ($data['NOTIFY']['CODE'])
-                {
+        if ($data['NOTIFY']['CODE']) {
+            switch ($data['NOTIFY']['CODE']) {
                 case 403:
                     $this->sendJsonResponse(['error' => 403], 403);
                     break;
                 default:
                     $this->sendJsonResponse(['error' => 0]);
                     break;
-                }
             }
-        elseif ($data['BACK_URL'])
-            {
+        } elseif ($data['BACK_URL']) {
             LocalRedirect($data['BACK_URL']);
-            }
-        else
-            {
+        } else {
             echo 'SUCCESS';
-            }
+        }
 
         return;
-        }
+    }
 
     /**
      * @return array
      */
     public function getCurrencyList()
-        {
+    {
         return ['RUB'];
-        }
+    }
 
     /**
      * Log event.
@@ -383,9 +363,8 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @param  array  $desc
      */
     protected function log($type, array $desc)
-        {
-        if ($this->debug)
-            {
+    {
+        if ($this->debug) {
             CEventLog::Add([
                 'SEVERITY'      => 'DEBUG',
                 'AUDIT_TYPE_ID' => 'PAYMENT_RAIF_' . $type,
@@ -393,8 +372,8 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
                 'ITEM_ID'       => 1,
                 'DESCRIPTION'   => $desc,
             ]);
-            }
         }
+    }
 
     /**
      * Sends request on rfzn server for refund payment.
@@ -412,8 +391,8 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
      * @throws \ErrorException
      * @throws \Exception
      */
-    public function refund(Payment $payment, $refundableSum) 
-        {
+    public function refund(Payment $payment, $refundableSum)
+    {
         $this->initialise($payment);
 
         file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/log_paid.php", "\n" . Date("H:i:s: ") . print_r("refund", 1), FILE_APPEND);
@@ -424,8 +403,7 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
         $items  = [];
         $order  = $payment->getOrder();
         $basket = $order->getBasket();
-        foreach ($basket as $basketItem)
-            {
+        foreach ($basket as $basketItem) {
             $items[] = [
                 'name'        => $basketItem->getField('NAME'),
                 'price'       => $basketItem->getPrice(),
@@ -434,10 +412,9 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
                 "paymentMode" => "FULL_PREPAYMENT",
                 "vatType"     => $this->vat,
             ];
-            }
+        }
 
-        if ($order->getDeliveryPrice() > 0)
-            {
+        if ($order->getDeliveryPrice() > 0) {
             $items[] = [
                 "name"     => 'Доставка',
                 "price"    => $order->getDeliveryPrice(),
@@ -445,7 +422,7 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
                 "amount"   => $order->getDeliveryPrice(),
                 "vatType"  => $this->vat
             ];
-            }
+        }
 
         $rsUser = \CUser::GetByID($order->getUserId())->GetNext();
 
@@ -457,17 +434,16 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
         $client   = new \Raiffeisen\Ecom\Client($this->secretKey, $this->publicKey, \Raiffeisen\Ecom\Client::HOST_TEST);
 
         $response = $client->postOrderRefund($orderId, $refundId, $amount, array("customer" => ["email" => $rsUser['EMAIL'],], "items" => $items));
-        if ($response['refundStatus'] == "COMPLETED")
-            {
+        if ($response['refundStatus'] == "COMPLETED") {
             $result->setOperationType(ServiceResult::MONEY_LEAVING);
             $payment->setPaid("N");
             $saved = $payment->save()->isSuccess();
-            }
+        }
 
         file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/log_paid.php", "\n" . Date("H:i:s: ") . print_r($response, 1), FILE_APPEND);
 
         file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/log_paid.php", "\n" . Date("H:i:s: ") . print_r("refund end", 1), FILE_APPEND);
 
         return $result;
-        }
     }
+}
