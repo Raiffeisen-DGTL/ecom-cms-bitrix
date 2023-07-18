@@ -50,6 +50,8 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
     $basketItems = $basket->getBasketItems();
     $bItems      = [];
 
+    $vatType = $params["SELLER_VAT"] === "NONE" ? "NONE" : ("VAT" . $params["SELLER_VAT"]);
+
     foreach ($basketItems as $item) {
         $bItems[] = [
             "name"            => $item->getField('NAME'),
@@ -60,7 +62,7 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
             "paymentMode"     => "FULL_PAYMENT",
             "measurementUnit" => "OTHER",
             //"nomenclatureCode" => $item->getField('PRODUCT_XML_ID'),
-            "vatType"         => ("VAT" . $params["SELLER_VAT"])
+            "vatType"  => $vatType,
         ];
     }
 
@@ -70,7 +72,7 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
             "price"    => $order->getDeliveryPrice(),
             "quantity" => 1,
             "amount"   => $order->getDeliveryPrice(),
-            "vatType"  => ("VAT" . $params["SELLER_VAT"])
+            "vatType"  => $vatType,
         ];
     }
 
