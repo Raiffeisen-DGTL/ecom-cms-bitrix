@@ -32,9 +32,9 @@ if ($REQUEST_METHOD == "POST" && strlen($Update . $Apply . $RestoreDefaults) > 0
 			if ($arOption[2][0] == "checkbox" && $val != "Y")
 				$val = "N";
 			if ($name == 'FORM_STYLE') {
-				$val = preg_replace('/(.*style: )/s', '', $val);
-				$val = preg_replace('/(.*?}\s)(.*;)/s', '$1', $val);
-				$val = preg_replace('/(\w+):/s', '"$1":', $val);
+				$val = preg_filter('/(.*style: )/s', '', $val);
+				$val = preg_filter('/(?P<r>{((?>[^{}]*)|(?P>r))+}).*/s', '$1', $val);
+				$val = preg_filter('/(\b(?!https?\b)\w+):/s', '"$1":', $val);
 			}
 
 			COption::SetOptionString($module_id, $name, $val, $arOption[1]);
