@@ -19,7 +19,7 @@ if (Loader::includeModule("bitrix24")) {
 }
 
 $description = array(
-    'MAIN' => 'Изменить стиль формы оплаты можно перейдя в Настройки -> Настройки продукта -> Настройки модулей -> ' . '<a href="/bitrix/admin/settings.php?lang=ru&mid=raiffeizenpay" target="_blank">Прием платежей Raiffeisen</a>'
+    'MAIN' => Loc::getMessage('SALE_HPS_RAIF_STYLES')
 );
 
 $data = array(
@@ -47,7 +47,7 @@ $data = array(
             "SORT"     => 300,
             'GROUP'    => 'SELLER_COMPANY',
             'DEFAULT'  => [
-                'PROVIDER_VALUE' => 'https://' . $_SERVER['SERVER_NAME'] . '/local/php_interface/include/sale_payment/raiffeizenpay/callback.php',
+                'PROVIDER_VALUE' => 'https://' . $_SERVER['SERVER_NAME'] . '/local/php_interface/include/sale_payment/ruraiffeisen_raiffeisenpay/callback.php',
                 'PROVIDER_KEY'   => 'VALUE',
             ],
             'DISABLED' => 'Y',
@@ -72,9 +72,9 @@ $data = array(
             'INPUT'   => [
                 'TYPE'    => 'ENUM',
                 'OPTIONS' => [
-                    'both' => 'Все',
-                    'sbp'  => 'СБП',
-                    'card' => 'Банковская карта',
+                    'both' => Loc::getMessage('SALE_HPS_RAIF_SELLER_METHOD_BOTH'),
+                    'sbp'  => Loc::getMessage('SALE_HPS_RAIF_SELLER_METHOD_SBP'),
+                    'card' => Loc::getMessage('SALE_HPS_RAIF_SELLER_METHOD_CARD'),
                 ]
             ],
             'DEFAULT' => array(
@@ -89,8 +89,8 @@ $data = array(
             'INPUT'   => [
                 'TYPE'    => 'ENUM',
                 'OPTIONS' => [
-                    'on'  => 'Включить',
-                    'off' => 'Выключить'
+                    'on'  => Loc::getMessage('SALE_HPS_RAIF_FISCALIZATION_ON'),
+                    'off' => Loc::getMessage('SALE_HPS_RAIF_FISCALIZATION_OFF'),
                 ]
             ],
             'DEFAULT' => [
@@ -106,8 +106,8 @@ $data = array(
             'INPUT'   => [
                 'TYPE'    => 'ENUM',
                 'OPTIONS' => [
-                    'yes' => 'Да',
-                    'no'  => 'Нет'
+                    'yes' => Loc::getMessage('SALE_HPS_RAIF_YES'),
+                    'no'  => Loc::getMessage('SALE_HPS_RAIF_NO'),
                 ]
             ],
             'DEFAULT' => [
@@ -123,8 +123,8 @@ $data = array(
             'INPUT'   => [
                 'TYPE'    => 'ENUM',
                 'OPTIONS' => [
-                    'yes' => 'Да',
-                    'no'  => 'Нет'
+                    'yes' => Loc::getMessage('SALE_HPS_RAIF_YES'),
+                    'no'  => Loc::getMessage('SALE_HPS_RAIF_NO'),
                 ]
             ],
             'DEFAULT' => [

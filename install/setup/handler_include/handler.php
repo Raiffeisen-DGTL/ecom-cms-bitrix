@@ -2,6 +2,7 @@
 
 namespace Sale\Handlers\PaySystem;
 
+use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Request;
 use Bitrix\Sale\PaySystem\ServiceResult;
 use Bitrix\Sale;
@@ -11,13 +12,41 @@ use Bitrix\Main\Web\Json;
 use Bitrix\Main\Diag;
 use Bitrix\Sale\Payment;
 use Bitrix\Main\Loader;
+use Bitrix\Sale\BusinessValue;
+use Bitrix\Sale\PaySystem\Manager;
+use Bitrix\Sale\PaySystem\Service;
 
-class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem\IRefund
+Loc::loadMessages(__FILE__);
+
+class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler implements PaySystem\IRefund
 {
     private $vat;
     private $debug;
     private $secretKey;
     private $publicKey;
+
+    public static function OnBusinessValueSetMapping(\Bitrix\Main\Event $event)
+    {
+        // echo '<pre>'; var_dump($event); echo '</pre>';
+        // die();
+        ['PAY_SYSTEM_ID' => $id, 'OLD_FIELDS' => $old, 'NEW_FIELDS' => $new] = $event->getParameters();
+        if($new['ACTION_FILE'] == 'ruraiffeisen_raiffeisenpay')  {
+            /** @var Service $paySystem */
+            $paySystem = Manager::getObjectById($id);
+            // echo '<pre>'; var_dump($paySystem); echo '</pre>';
+            
+            // echo '<pre>'; var_dump($paySystem->getConsumerName()); echo '</pre>';
+            ['PROVIDER_VALUE' => $secretKey] = BusinessValue::getMapping('SELLER_SECRET',    $paySystem->getConsumerName());
+            ['PROVIDER_VALUE' => $publicKey] = BusinessValue::getMapping('SELLER_PUBLIC_ID', $paySystem->getConsumerName());
+            ['PROVIDER_VALUE' => $isTest]    = BusinessValue::getMapping('TEST_MODE',        $paySystem->getConsumerName());
+            ['PROVIDER_VALUE' => $callback]  = BusinessValue::getMapping('SELLER_CALLBACK',  $paySystem->getConsumerName());
+            // echo '<pre>'; var_dump($isTest); echo '</pre>';
+            $host = $isTest === 'yes' ? \Raiffeisen\Ecom\Client::HOST_TEST : \Raiffeisen\Ecom\Client::HOST_PROD;
+            $client = new \Raiffeisen\Ecom\Client($secretKey, $publicKey, $host);
+            $client->postCallbackUrl($callback);
+        }
+        // Diag\Debug::dumpToFile($event, "OnBusinessValueSetMapping", '/upload/events.log');
+    }
 
     /**
      * Process request after payment.
@@ -368,7 +397,7 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
             CEventLog::Add([
                 'SEVERITY'      => 'DEBUG',
                 'AUDIT_TYPE_ID' => 'PAYMENT_RAIF_' . $type,
-                'MODULE_ID'     => 'raiffeizenpay',
+                'MODULE_ID'     => 'ruraiffeisen_raiffeisenpay',
                 'ITEM_ID'       => 1,
                 'DESCRIPTION'   => $desc,
             ]);
@@ -416,7 +445,7 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
 
         if ($order->getDeliveryPrice() > 0) {
             $items[] = [
-                "name"     => 'Доставка',
+                "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_DELIVERY'),
                 "price"    => $order->getDeliveryPrice(),
                 "quantity" => 1,
                 "amount"   => $order->getDeliveryPrice(),
@@ -426,7 +455,7 @@ class raiffeizenpayHandler extends PaySystem\ServiceHandler implements PaySystem
 
         $rsUser = \CUser::GetByID($order->getUserId())->GetNext();
 
-        Loader::includeModule("raiffeizenpay");
+        Loader::includeModule("ruraiffeisen_raiffeisenpay");
 
         $orderId  = $order->getField('ID');
         $refundId = sha1(time() * rand(1, 99));

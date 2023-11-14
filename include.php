@@ -1,6 +1,7 @@
 <?php
 use Bitrix\Main;
 use Bitrix\Main\Loader;
+
 $lib_path = 'classes';
 
 $classes = array(
@@ -9,8 +10,8 @@ $classes = array(
 );
 
 Loader::registerAutoLoadClasses(
-	"raiffeizenpay",
-		$classes
+	"ruraiffeisen.raiffeisenpay",
+	$classes
 );
 
 ?>

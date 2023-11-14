@@ -1,3 +1,3 @@
 <?php
-define("ADMIN_MODULE_NAME", "raiffeizen.pay");
+define("ADMIN_MODULE_NAME", "ruraiffeisen_raiffeisenpay");
 ?>
