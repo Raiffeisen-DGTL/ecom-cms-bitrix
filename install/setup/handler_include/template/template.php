@@ -22,7 +22,7 @@ if (array_key_exists('PAYMENT_SHOULD_PAY', $params)) {
 
 // $formStyles=file_get_contents($_SERVER['DOCUMENT_ROOT'].$params["SELLER_STYLES"]);
 
-$formStyles = Option::get('raiffeizenpay', 'FORM_STYLE');
+$formStyles = Option::get('ruraiffeisen_raiffeisenpay', 'FORM_STYLE');
 
 /*
 $formStyles=explode("style: ",$formStyles);
@@ -68,7 +68,7 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
 
     if ($order->getDeliveryPrice() > 0) {
         $bItems[] = [
-            "name"     => 'Доставка',
+            "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_DELIVERY'),
             "price"    => $order->getDeliveryPrice(),
             "quantity" => 1,
             "amount"   => $order->getDeliveryPrice(),
@@ -161,12 +161,12 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
         <? endif ?>
         <input name="expirationDate" id="expirationDate"
             value="<?= $expTime->format('Y-m-d') . "T" . $expTime->format('H:i:sP') ?>" style="width: 200px;" />
-        <input id="paymentDetails" name="paymentDetails" value="Оплата заказа <?= $orderID ?>" type="hidden" />
+        <input id="paymentDetails" name="paymentDetails" value="<?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_ORDER_PAYMENT') ?> <?= $orderID ?>" type="hidden" />
         <textarea type="text" id="receipt" name="receipt" rows="20"
-            style="width: 300px"><?= json_encode($receipt) ?></textarea>
+            style="width: 300px"><?= \Bitrix\Main\Web\Json::encode($receipt) ?></textarea>
     </form>
 
-    <button class="button-pay" id="openPopup">Открыть окно оплаты</button>
+    <button class="button-pay" id="openPopup"><?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_OPEN_PAYMENT_POPUP') ?></button>
 
     <div id="portal"></div>
 
@@ -176,9 +176,8 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                 const paymentData = getPaymentData();
 
                 const paymentPage = new PaymentPageSdk(getPaymentData().publicId, {
-                    targetElem: null, url: "<?= $params['TEST_MODE'] === 'yes' ? "https://pay-test.raif.ru/pay" : 'https://pay.raif.ru/pay' ?>"
+                    targetElem: null, url: "<?= $params['TEST_MODE'] === 'yes' ? 'https://pay-test.raif.ru/pay' : 'https://pay.raif.ru/pay' ?>"
                 });
-
 
                 <? if ($params['OPEN_ON_NEW_PAGE'] == 'no'): ?>
                     paymentPage.openPopup({
@@ -237,23 +236,28 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                 const receiptString = document.getElementById('receipt').value; // нужен для того, чтобы зарегистрировать чек
                 //const styleString = document.getElementById('style').value; // мерч может сам настроить стилизацию
                 const styleString = JSON.stringify(styleForm);
+                
+                const encoder = new TextEncoder()
+                const decoder = new TextDecoder(document.charset)
+                
+                const paymentDetails = decoder.decode(encoder.encode(document.getElementById('paymentDetails').value))
+                
                 const result = {
                     amount: parseInt(document.getElementById('amount').value), // цена
                     orderId: document.getElementById('orderId').value, // номер заказа
                     successUrl: document.getElementById('successUrl').value,
                     failUrl: document.getElementById('failUrl').value,
-
-                    comment: document.getElementById('paymentDetails').value, // описание товара
+                    comment: paymentDetails, // описание товара
                     publicId: document.getElementById('publicId').value,
                     paymentMethod: document.getElementById('paymentMethod').value,
                     locale: "RU",
                     expirationDate: document.getElementById('expirationDate').value,
-                    paymentDetails: document.getElementById('paymentDetails').value
+                    paymentDetails: paymentDetails
                 };
 
                 //result.extra = extraString ? JSON.parse(extraString) : '';
 
-                result.receipt = receiptString ? JSON.parse(receiptString) : '';
+                result.receipt = receiptString ? JSON.parse(receiptString, (k, v) => typeof v === 'string' ? decoder.decode(encoder.encode(v)) : v) : '';
 
                 result.style = styleString ? JSON.parse(styleString) : '';
                 console.log('getPaymentData', result);

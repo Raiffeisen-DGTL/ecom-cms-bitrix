@@ -1,5 +1,5 @@
 <?
-$module_id = "raiffeizenpay";
+$module_id = "ruraiffeisen_raiffeisenpay";
 
 if (!$USER->CanDoOperation($module_id)) {
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
