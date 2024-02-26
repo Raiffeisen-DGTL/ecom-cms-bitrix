@@ -1,4 +1,7 @@
 <?
+
+use Bitrix\Main\Localization\Loc;
+
 $module_id = "ruraiffeisen_raiffeisenpay";
 
 if (!$USER->CanDoOperation($module_id)) {
@@ -7,14 +10,16 @@ if (!$USER->CanDoOperation($module_id)) {
 
 CModule::IncludeModule($module_id);
 
+Loc::loadMessages(__FILE__);
+
 IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"] . BX_ROOT . "/modules/main/options.php");
 IncludeModuleLangFile(__FILE__);
 
 $arAllOptions = array(
-	array("FORM_STYLE", 'Стили формы оплаты', array("textarea", 20, 100))
+	array("FORM_STYLE", Loc::getMessage('PAYMENT_FORM_STYLES'), array("textarea", 20, 100))
 );
 $aTabs        = array();
-$aTabs[]      = array("DIV" => "edit0", "TAB" => "Настройки", "ICON" => "seo_settings", "TITLE" => "Настройки");
+$aTabs[]      = array("DIV" => "edit0", "TAB" => Loc::getMessage("SETTINGS"), "ICON" => "seo_settings", "TITLE" => Loc::getMessage("SETTINGS"));
 
 $tabControl = new CAdminTabControl("tabControl", $aTabs);
 
@@ -85,7 +90,7 @@ $tabControl->Begin();
 				?>
 				<?php if ($arOption[0] == 'FORM_STYLE'): ?>
 					</br>
-					<i>CSS стили для формы оплаты. Измените внешний вид формы в конструкторе и перенесите код в эту форму.
+					<i><?= Loc::getMessage('CSS_STYLES_FOR_PAYMENT_FORM') ?>
 						(<a href="https://e-commerce.raiffeisen.ru/pay/configurator/#/"
 							target="_blank">https://e-commerce.raiffeisen.ru/pay/configurator/#/</a>)</i>
 				<?php endif ?>
