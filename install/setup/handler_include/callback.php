@@ -21,12 +21,13 @@ global $APPLICATION;
 try {
 	if (CModule::IncludeModule("sale")) {
 		$context = Application::getInstance()->getContext();
+		$input = file_get_contents('php://input');
+		Diag\Debug::dumpToFile($input, "input", '/upload/logs.log');
 		$request = new HttpRequest(new Server($_SERVER), [], Json::decode(file_get_contents('php://input')), [], []);
 		$item    = PaySystem\Manager::searchByRequest($request);
 
-		Diag\Debug::dumpToFile($request, "", '/upload/logs.log');
-		Diag\Debug::dumpToFile($item, "input", '/upload/logs.log');
-
+		Diag\Debug::dumpToFile($request, "request", '/upload/logs.log');
+		Diag\Debug::dumpToFile($item, "item", '/upload/logs.log');
 		if ($item !== false) {
 			$service = new PaySystem\Service($item);
 			$handler = new ruraiffeisen_raiffeisenpayHandler(ServiceResult::MONEY_COMING, $service);
