@@ -1,10 +1,13 @@
-<?php
+<?php if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
+die(); 
 
+use Bitrix\Main\ArgumentNullException;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale;
 use Bitrix\Sale\Payment;
 use Bitrix\Sale\PriceMaths;
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\Diag;
 use Bitrix\Main\Page\Asset;
 
 /** @var \Bitrix\Sale\Payment $payment */
@@ -31,12 +34,22 @@ $formStyles=explode("successSbpUrl",$formStyles);
 $formStyles=$formStyles[0];
 */
 
-$order     = Sale\Order::load($_GET["ORDER_ID"]);
+Diag\Debug::dumpToFile($params, "template params", '/raiffeisenpay_logs.log');
+
+try {
+    $order = Sale\Order::loadByAccountNumber($params["ACCOUNT_NUMBER"]);
+}
+catch (ArgumentNullException $e) {
+    Diag\Debug::dumpToFile($_SERVER["REQUEST_URI"], "request_uri", '/raiffeisenpay_logs.log');
+    Diag\Debug::dumpToFile($_GET, "get", '/raiffeisenpay_logs.log');
+    Diag\Debug::dumpToFile($e, "exception", '/raiffeisenpay_logs.log');
+    throw $e;
+}
 $userID    = $order->getUserId();
 $userName  = \Bitrix\Main\Engine\CurrentUser::get()->getFullName();
 $userEmail = \Bitrix\Main\Engine\CurrentUser::get()->getEmail();
 $paySum    = $order->getPrice();
-$orderID   = $order->getId();
+$orderID   = $params["ACCOUNT_NUMBER"];
 
 $receipt = [];
 
@@ -86,19 +99,23 @@ $receipt["payments"][] = [
 ];
 */
 
-$expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'));
+if (array_key_exists('ORDER_LIFETIME', $params)) {
+    $expPeriod = intval($params["ORDER_LIFETIME"]);
+}
+else {
+    $expPeriod = 15;
+}
+
+if ($expPeriod > 0) {
+    $expTime = (new DateTime())->add(DateInterval::createFromDateString("{$expPeriod} minutes"));
+}
+else {
+    $expTime = null;
+}
 
 ?>
 
-<? if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
-    die(); ?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<html>
-
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1,user-scalable=no,
-              shrink-to-fit=no" />
-    <meta http-equiv="Content-Type" content="text/html; charset=<?= LANG_CHARSET ?>">
+    <link rel="stylesheet" href="https://pay.raif.ru/pay/sdk/v2/payment.min.css">
     <style type="text/css">
         H1 {
             font-size: 12pt;
@@ -135,47 +152,45 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
             font-weight: bold;
         }
     </style>
-    <link rel="stylesheet" href="https://pay.raif.ru/pay/sdk/v2/payment.min.css">
     <script src="https://pay.raif.ru/pay/sdk/v2/payment.styled.min.js"></script>
-</head>
 
-<body class="lol q">
+<form method="POST" name="redirectToAcsForm" id="form" target="_blank" style="display: none">
+    <input name="amount" id="amount" value="<?= $paySum ?>" type="hidden" />
+    <input name="orderId" id="orderId" value="<?= $orderID ?>" id="order" type="hidden" />
+    <input name="successUrl" id="successUrl" value="<?= ($_SERVER["SERVER_NAME"] . $params['BACK_URI_SUCCESS']) ?>"
+        type="hidden" />
+    <input name="failUrl" id="failUrl" value="<?= ($_SERVER["SERVER_NAME"] . $params['BACK_URI_FAIL']) ?>"
+        type="hidden" />
+    <input name="publicId" id="publicId" value="<?= $params["SELLER_PUBLIC_ID"] ?>" type="hidden" />
+    <input name="paymentMethod" id="paymentMethod" value="<?= $params["SELLER_METHOD"] ?>" type="hidden" />
+    <? if ($formStyles): ?>
+        <script>
+            const styleForm = <?= $formStyles ?>; 
+        </script>
+    <? else: ?>
+        <script>
+            const styleForm = null; 
+        </script>
+    <? endif ?>
+    <input name="expirationDate" id="expirationDate"
+        value="<?= $expTime ? $expTime->format('Y-m-d') . "T" . $expTime->format('H:i:sP') : '' ?>" style="width: 200px;" />
+    <input id="paymentDetails" name="paymentDetails" value="<?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_ORDER_PAYMENT') ?> <?= $orderID ?>" type="hidden" />
+    <textarea type="text" id="receipt" name="receipt" rows="20"
+        style="width: 300px"><?= \Bitrix\Main\Web\Json::encode($receipt) ?></textarea>
+</form>
 
-    <form method="POST" name="redirectToAcsForm" id="form" target="_blank" style="display: none">
-        <input name="amount" id="amount" value="<?= $paySum ?>" type="hidden" />
-        <input name="orderId" id="orderId" value="<?= $orderID ?>" id="order" type="hidden" />
-        <input name="successUrl" id="successUrl" value="<?= ($_SERVER["SERVER_NAME"] . $params['BACK_URI_SUCCESS']) ?>"
-            type="hidden" />
-        <input name="failUrl" id="failUrl" value="<?= ($_SERVER["SERVER_NAME"] . $params['BACK_URI_FAIL']) ?>"
-            type="hidden" />
-        <input name="publicId" id="publicId" value="<?= $params["SELLER_PUBLIC_ID"] ?>" type="hidden" />
-        <input name="paymentMethod" id="paymentMethod" value="<?= $params["SELLER_METHOD"] ?>" type="hidden" />
-        <? if ($formStyles): ?>
-            <script>
-                const styleForm = <?= $formStyles ?>; 
-            </script>
-        <? else: ?>
-            <script>
-                const styleForm = {}; 
-            </script>
-        <? endif ?>
-        <input name="expirationDate" id="expirationDate"
-            value="<?= $expTime->format('Y-m-d') . "T" . $expTime->format('H:i:sP') ?>" style="width: 200px;" />
-        <input id="paymentDetails" name="paymentDetails" value="<?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_ORDER_PAYMENT') ?> <?= $orderID ?>" type="hidden" />
-        <textarea type="text" id="receipt" name="receipt" rows="20"
-            style="width: 300px"><?= \Bitrix\Main\Web\Json::encode($receipt) ?></textarea>
-    </form>
+<button class="button-pay" id="openPopup"><?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_OPEN_PAYMENT_POPUP') ?></button>
 
-    <button class="button-pay" id="openPopup"><?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_OPEN_PAYMENT_POPUP') ?></button>
+<div id="portal"></div>
 
-    <div id="portal"></div>
-
-    <script>
-        window.onload = function () {
+<script>
+    const loadInterval = setInterval(() => {
+        if(PaymentPageSdk) {
+            clearInterval(loadInterval);
             const processPayment = () => {
                 const paymentData = getPaymentData();
 
-                const paymentPage = new PaymentPageSdk(getPaymentData().publicId, {
+                const paymentPage = new PaymentPageSdk(paymentData.publicId, {
                     targetElem: null, url: "<?= $params['TEST_MODE'] === 'yes' ? 'https://pay-test.raif.ru/pay' : 'https://pay.raif.ru/pay' ?>"
                 });
 
@@ -185,14 +200,17 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                         publicId: paymentData.publicId,
                         orderId: paymentData.orderId,
                         comment: paymentData.comment,
-                        style: paymentData.style,
+                        ...(paymentData.style ? {style: paymentData.style} : {}),
                         <? if ($params['SELLER_METHOD'] !== 'both'): ?>
                             paymentMethod: "<?= $params['SELLER_METHOD'] == 'sbp' ? 'ONLY_SBP' : 'ONLY_ACQUIRING' ?>",
                         <? endif; ?>
                         <? if ($params['SELLER_FISCALIZATION'] === 'on'): ?>
                             receipt: paymentData.receipt,
                         <? endif; ?>
-                        expirationDate: paymentData.expirationDate,
+                        ...(paymentData.expirationDate ? { expirationDate: paymentData.expirationDate } : {}),
+                        extra: {
+                            email: paymentData.receipt.customer.email,
+                        },
                     })
                         .then(function (result) {
                             console.log('payment result', result);
@@ -205,20 +223,22 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                 <? if ($params['OPEN_ON_NEW_PAGE'] == 'yes'): ?>
                     paymentPage.openWindow({
                         amount: paymentData.amount,
+                        publicId: paymentData.publicId,
                         orderId: paymentData.orderId,
-                        style: paymentData.style,
+                        comment: paymentData.comment,
+                        ...(paymentData.style ? {style: paymentData.style} : {}),
                         <? if ($params['SELLER_METHOD'] !== 'both'): ?>
                             paymentMethod: "<?= $params['SELLER_METHOD'] == 'sbp' ? 'ONLY_SBP' : 'ONLY_ACQUIRING' ?>",
                         <? endif; ?>
-                        successUrl: paymentData.successUrl,
-                        failUrl: paymentData.failUrl,
-                        extra: {
-                            email: paymentData.receipt.email,
-                        },
                         <? if ($params['SELLER_FISCALIZATION'] === 'on'): ?>
                             receipt: paymentData.receipt,
                         <? endif; ?>
-                        comment: paymentData.comment
+                        ...(paymentData.expirationDate ? { expirationDate: paymentData.expirationDate } : {}),
+                        extra: {
+                            email: paymentData.receipt.customer.email,
+                        },
+                        successUrl: paymentData.successUrl,
+                        failUrl: paymentData.failUrl,
                     });
                 <? endif; ?>
             }
@@ -235,7 +255,7 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
                 //const extraString = document.getElementById('extra').value; // параметры, которые придут пользователю (любые данные)
                 const receiptString = document.getElementById('receipt').value; // нужен для того, чтобы зарегистрировать чек
                 //const styleString = document.getElementById('style').value; // мерч может сам настроить стилизацию
-                const styleString = JSON.stringify(styleForm);
+                const styleString = styleForm ? JSON.stringify(styleForm) : null;
                 
                 const encoder = new TextEncoder()
                 const decoder = new TextDecoder(document.charset)
@@ -259,15 +279,13 @@ $expTime = (new DateTime())->add(DateInterval::createFromDateString('15 minutes'
 
                 result.receipt = receiptString ? JSON.parse(receiptString, (k, v) => typeof v === 'string' ? decoder.decode(encoder.encode(v)) : v) : '';
 
-                result.style = styleString ? JSON.parse(styleString) : '';
+                result.style = styleString ? JSON.parse(styleString) : null;
                 console.log('getPaymentData', result);
                 return result;
             };
 
-            document.addEventListener('DOMContentLoaded', processPayment);
             document.querySelector('#openPopup').addEventListener('click', processPayment);
-        }();
-    </script>
-</body>
-
-</html>
+            processPayment();
+        }
+    }, 100)
+</script>
