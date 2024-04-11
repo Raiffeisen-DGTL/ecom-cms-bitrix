@@ -37,7 +37,7 @@ Class ruraiffeisen_raiffeisenpay extends CModule
 	function InstallFiles($arParams = array())
 	{
 		CopyDirFiles($this->MODULE_PATH . "/install/setup/handler_include", $this->PAYMENT_HANDLER_PATH, true, true);
-		CopyDirFiles($this->MODULE_PATH . "/install/setup/images/logo", $_SERVER["DOCUMENT_ROOT"] . "/bitrix/images/" . $this->MODULE_ID . "/");
+		CopyDirFiles($this->MODULE_PATH . "/install/setup/images/logo", $_SERVER["DOCUMENT_ROOT"] . "/bitrix/images/sale/sale_payments/");
 	}
 
 	function UnInstallFiles()
