@@ -13,6 +13,7 @@ use Bitrix\Main\Diag;
 use Bitrix\Sale\Payment;
 use Bitrix\Main\Loader;
 use Bitrix\Sale\BusinessValue;
+use Bitrix\Sale\Internals\PaySystemActionTable;
 use Bitrix\Sale\PaySystem\Manager;
 use Bitrix\Sale\PaySystem\Service;
 
@@ -28,15 +29,19 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     private $secretKey;
     private $publicKey;
 
-    public static function OnBusinessValueSetMapping(\Bitrix\Main\Event $event)
+    public static function OnSalePaySystemUpdate(\Bitrix\Main\Event $event)
     {
-        // echo '<pre>'; var_dump($event); echo '</pre>';
-        // die();
+
+        Diag\Debug::dumpToFile($event, "OnSalePaySystemUpdate event", '/raiffeisenpay_logs.log');
         ['PAY_SYSTEM_ID' => $id, 'OLD_FIELDS' => $old, 'NEW_FIELDS' => $new] = $event->getParameters();
-        if($new['ACTION_FILE'] == 'ruraiffeisen_raiffeisenpay')  {
-            /** @var Service $paySystem */
-            $paySystem = Manager::getObjectById($id);
-            // echo '<pre>'; var_dump($paySystem); echo '</pre>';
+        /** @var Service $paySystem */
+        $paySystem = Manager::getObjectById($id);
+
+        $actionFile = $new['ACTION_FILE'] ? $new['ACTION_FILE'] : ($paySystem ? $paySystem->getField('ACTION_FILE') : null);
+        Diag\Debug::dumpToFile($actionFile, "callback update actionFile", '/raiffeisenpay_logs.log');
+        if($actionFile == 'ruraiffeisen_raiffeisenpay')  {
+            Diag\Debug::dumpToFile($paySystem, "callback update paySystem", '/raiffeisenpay_logs.log');
+            Diag\Debug::dumpToFile($paySystem->getConsumerName(), "callback update paySystem->getConsumerName()", '/raiffeisenpay_logs.log');
             
             // echo '<pre>'; var_dump($paySystem->getConsumerName()); echo '</pre>';
             ['PROVIDER_VALUE' => $secretKey] = BusinessValue::getMapping('SELLER_SECRET',    $paySystem->getConsumerName());
@@ -44,18 +49,29 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
             ['PROVIDER_VALUE' => $isTest]    = BusinessValue::getMapping('TEST_MODE',        $paySystem->getConsumerName());
             ['PROVIDER_VALUE' => $callback]  = BusinessValue::getMapping('SELLER_CALLBACK',  $paySystem->getConsumerName());
             // echo '<pre>'; var_dump($isTest); echo '</pre>';
-            if($secretKey && $publicKey && $callback) {
-                try {
+            Diag\Debug::dumpToFile($secretKey, "callback update secretKey", '/raiffeisenpay_logs.log');
+            Diag\Debug::dumpToFile($publicKey, "callback update publicKey", '/raiffeisenpay_logs.log');
+            Diag\Debug::dumpToFile($callback,  "callback update callback",  '/raiffeisenpay_logs.log');
+            try {
+                if($secretKey && $publicKey && $callback) {
                     $host = $isTest === 'yes' ? \Raiffeisen\Ecom\Client::HOST_TEST : \Raiffeisen\Ecom\Client::HOST_PROD;
                     $client = new \Raiffeisen\Ecom\Client($secretKey, $publicKey, $host);
-                    $client->postCallbackUrl($callback);
+                    $result = $client->postCallbackUrl($callback);
+                    Diag\Debug::dumpToFile($result,  "callback update result",  '/raiffeisenpay_logs.log');
                 }
-                catch (Exception $e) {
-                    Diag\Debug::dumpToFile($e, "callback update exception", '/raiffeisenpay_logs.log');
+                elseif($new['PAY_SYSTEM_ID'] && !$old['PAY_SYSTEM_ID']) {
+                    Manager::update($id, []);
                 }
             }
+            catch (Exception $e) {
+                Diag\Debug::dumpToFile($e, "callback update exception", '/raiffeisenpay_logs.log');
+            }
         }
-        // Diag\Debug::dumpToFile($event, "OnBusinessValueSetMapping", '/upload/events.log');
+    }
+
+    public static function OnAfterAdd(\Bitrix\Main\Event $event)
+    {
+        Diag\Debug::dumpToFile($event, "OnAfterAdd event", '/raiffeisenpay_logs.log');
     }
 
 	/**
@@ -129,7 +145,10 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     public function initiatePay(Sale\Payment $payment, Request $request = null)
     {
         $accountNumber = $payment->getOrder()->getFieldValues()['ACCOUNT_NUMBER'];
-        $this->setExtraParams(['ACCOUNT_NUMBER' => $accountNumber]);
+        $this->setExtraParams([
+            'ACCOUNT_NUMBER' => $accountNumber,
+            'PAYMENT_ID' => $payment->getId(),
+        ]);
         Diag\Debug::dumpToFile($payment, "initiatePay payment", '/raiffeisenpay_logs.log');
         return $this->showTemplate($payment, "template");
     }
@@ -221,7 +240,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     {
         $result = new ServiceResult();
         $action = $request->get('transaction')['status']['value'];
-        Diag\Debug::dumpToFile($request->get('transaction'), "request->transaction", '/raiffeisenpay_logs.log');
+        Diag\Debug::dumpToFile($request->get('transaction'), "processRequestCustom request->transaction", '/raiffeisenpay_logs.log');
 
         switch ($action) {
             case 'SUCCESS':
@@ -250,7 +269,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     {
         $result = new ServiceResult();
         //$this->initialise($payment);
-        Diag\Debug::dumpToFile($request->get("transaction"), "request->transaction", '/raiffeisenpay_logs.log');
+        Diag\Debug::dumpToFile($request->get("transaction"), "processSuccessAction request->transaction", '/raiffeisenpay_logs.log');
 
 
         $billInfo = true; //$this->checkBill($payment->getField('PS_INVOICE_ID'), $result);

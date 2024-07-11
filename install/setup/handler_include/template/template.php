@@ -9,6 +9,8 @@ use Bitrix\Sale\PriceMaths;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Diag;
 use Bitrix\Main\Page\Asset;
+use Bitrix\Sale\PaySystem\Manager;
+use Bitrix\Sale\PaySystem\Service;
 
 /** @var \Bitrix\Sale\Payment $payment */
 /** @var array $params */
@@ -37,6 +39,7 @@ $formStyles=$formStyles[0];
 Diag\Debug::dumpToFile($params, "template params", '/raiffeisenpay_logs.log');
 
 try {
+/** @var Sale\Order $order */
     $order = Sale\Order::loadByAccountNumber($params["ACCOUNT_NUMBER"]);
 }
 catch (ArgumentNullException $e) {
@@ -48,8 +51,17 @@ catch (ArgumentNullException $e) {
 $userID    = $order->getUserId();
 $userName  = \Bitrix\Main\Engine\CurrentUser::get()->getFullName();
 $userEmail = \Bitrix\Main\Engine\CurrentUser::get()->getEmail();
-$paySum    = $order->getPrice();
 $orderID   = $params["ACCOUNT_NUMBER"];
+
+$paySum = 0;
+foreach($order->getPaymentCollection()->getIterator() as $payment) {
+    /** @var \Bitrix\Sale\Payment $payment */
+    if($payment->getId() == $params["PAYMENT_ID"]) {
+        $paySum = $payment->getSum() - $payment->getSumPaid();
+        break;
+    }
+    $paySum = $order->getPrice();
+}
 
 $receipt = [];
 
@@ -115,44 +127,43 @@ else {
 
 ?>
 
-    <link rel="stylesheet" href="https://pay.raif.ru/pay/sdk/v2/payment.min.css">
-    <style type="text/css">
-        H1 {
-            font-size: 12pt;
-        }
+<style type="text/css">
+    H1 {
+        font-size: 12pt;
+    }
 
-        p,
-        ul,
-        ol,
-        h1 {
-            margin-top: 6px;
-            margin-bottom: 6px
-        }
+    p,
+    ul,
+    ol,
+    h1 {
+        margin-top: 6px;
+        margin-bottom: 6px
+    }
 
-        td {
-            font-size: 9pt;
-        }
+    td {
+        font-size: 9pt;
+    }
 
-        small {
-            font-size: 7pt;
-        }
+    small {
+        font-size: 7pt;
+    }
 
-        body {
-            font-size: 10pt;
-        }
+    body {
+        font-size: 10pt;
+    }
 
-        .button-pay {
-            color: #333;
-            border: none;
-            background-color: rgb(254, 230, 0);
-            border-radius: 8px;
-            padding: 6px 50px;
-            font-size: 14px;
-            margin: 20px 0;
-            font-weight: bold;
-        }
-    </style>
-    <script src="https://pay.raif.ru/pay/sdk/v2/payment.styled.min.js"></script>
+    .button-pay {
+        color: #333;
+        border: none;
+        background-color: rgb(254, 230, 0);
+        border-radius: 8px;
+        padding: 6px 50px;
+        font-size: 14px;
+        margin: 20px 0;
+        font-weight: bold;
+    }
+</style>
+<script src="https://pay.raif.ru/pay/sdk/v2/payment.styled.min.js"></script>
 
 <form method="POST" name="redirectToAcsForm" id="form" target="_blank" style="display: none">
     <input name="amount" id="amount" value="<?= $paySum ?>" type="hidden" />
@@ -195,8 +206,9 @@ else {
                 });
 
                 <? if ($params['OPEN_ON_NEW_PAGE'] == 'no'): ?>
+                    console.log(paymentData);
                     paymentPage.openPopup({
-                        amount: parseInt(paymentData.amount),
+                        amount: paymentData.amount,
                         publicId: paymentData.publicId,
                         orderId: paymentData.orderId,
                         comment: paymentData.comment,
@@ -221,6 +233,7 @@ else {
                         });
                 <? endif; ?>
                 <? if ($params['OPEN_ON_NEW_PAGE'] == 'yes'): ?>
+                    console.log(paymentData);
                     paymentPage.openWindow({
                         amount: paymentData.amount,
                         publicId: paymentData.publicId,
@@ -263,7 +276,7 @@ else {
                 const paymentDetails = decoder.decode(encoder.encode(document.getElementById('paymentDetails').value))
                 
                 const result = {
-                    amount: parseInt(document.getElementById('amount').value), // цена
+                    amount: parseFloat(document.getElementById('amount').value), // цена
                     orderId: document.getElementById('orderId').value, // номер заказа
                     successUrl: document.getElementById('successUrl').value,
                     failUrl: document.getElementById('failUrl').value,
