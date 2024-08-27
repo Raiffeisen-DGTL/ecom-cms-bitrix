@@ -54,14 +54,14 @@ Class ruraiffeisen_raiffeisenpay extends CModule
 		RegisterModule($this->MODULE_ID);
 
 		$eventManager = \Bitrix\Main\EventManager::getInstance();
-		$eventManager->registerEventHandler('sale', 'OnSalePaySystemUpdate', 'ruraiffeisen.raiffeisenpay', 'Sale\Handlers\PaySystem\ruraiffeisen_raiffeisenpayHandler', 'OnSalePaySystemUpdate');
+		// $eventManager->registerEventHandler('sale', 'OnSalePaySystemUpdate', 'ruraiffeisen.raiffeisenpay', 'Sale\Handlers\PaySystem\ruraiffeisen_raiffeisenpayHandler', 'OnSalePaySystemUpdate');
 		// COption::SetOptionInt($this->MODULE_ID, "delete", false);
 	}
 
 	function DoUninstall()
 	{
 		$eventManager = \Bitrix\Main\EventManager::getInstance();
-		$eventManager->unRegisterEventHandler('sale', 'OnSalePaySystemUpdate', 'ruraiffeisen.raiffeisenpay', 'Sale\Handlers\PaySystem\ruraiffeisen_raiffeisenpayHandler', 'OnSalePaySystemUpdate');
+		// $eventManager->unRegisterEventHandler('sale', 'OnSalePaySystemUpdate', 'ruraiffeisen.raiffeisenpay', 'Sale\Handlers\PaySystem\ruraiffeisen_raiffeisenpayHandler', 'OnSalePaySystemUpdate');
 
 		$ps_dir_path = "/local/php_interface/include/sale_payment/";
 		// COption::SetOptionInt($this->MODULE_ID, "delete", true);

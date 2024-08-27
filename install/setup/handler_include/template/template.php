@@ -36,16 +36,13 @@ $formStyles=explode("successSbpUrl",$formStyles);
 $formStyles=$formStyles[0];
 */
 
-Diag\Debug::dumpToFile($params, "template params", '/raiffeisenpay_logs.log');
 
 try {
 /** @var Sale\Order $order */
     $order = Sale\Order::loadByAccountNumber($params["ACCOUNT_NUMBER"]);
 }
 catch (ArgumentNullException $e) {
-    Diag\Debug::dumpToFile($_SERVER["REQUEST_URI"], "request_uri", '/raiffeisenpay_logs.log');
-    Diag\Debug::dumpToFile($_GET, "get", '/raiffeisenpay_logs.log');
-    Diag\Debug::dumpToFile($e, "exception", '/raiffeisenpay_logs.log');
+    $this->log('EXCEPTION', ['request_uri' => $_SERVER["REQUEST_URI"], 'request_get' => $_GET, 'exception' => $e]);
     throw $e;
 }
 $userID    = $order->getUserId();
@@ -277,7 +274,7 @@ else {
                 
                 const result = {
                     amount: parseFloat(document.getElementById('amount').value), // цена
-                    orderId: document.getElementById('orderId').value, // номер заказа
+                    orderId: decodeURI(document.getElementById('orderId').value), // номер заказа
                     successUrl: document.getElementById('successUrl').value,
                     failUrl: document.getElementById('failUrl').value,
                     comment: paymentDetails, // описание товара

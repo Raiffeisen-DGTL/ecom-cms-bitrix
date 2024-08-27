@@ -20,6 +20,10 @@ use Bitrix\Sale\PaySystem\Service;
 use Raiffeisen\Ecom\ClientException;
 use Exception;
 
+
+include_once(dirname(__FILE__) . "/classes/Client.php");
+include_once(dirname(__FILE__) . "/classes/ClientException.php");
+
 Loc::loadMessages(__FILE__);
 
 class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler implements PaySystem\IRefund
@@ -29,51 +33,6 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     private $secretKey;
     private $publicKey;
 
-    public static function OnSalePaySystemUpdate(\Bitrix\Main\Event $event)
-    {
-
-        Diag\Debug::dumpToFile($event, "OnSalePaySystemUpdate event", '/raiffeisenpay_logs.log');
-        ['PAY_SYSTEM_ID' => $id, 'OLD_FIELDS' => $old, 'NEW_FIELDS' => $new] = $event->getParameters();
-        /** @var Service $paySystem */
-        $paySystem = Manager::getObjectById($id);
-
-        $actionFile = $new['ACTION_FILE'] ? $new['ACTION_FILE'] : ($paySystem ? $paySystem->getField('ACTION_FILE') : null);
-        Diag\Debug::dumpToFile($actionFile, "callback update actionFile", '/raiffeisenpay_logs.log');
-        if($actionFile == 'ruraiffeisen_raiffeisenpay')  {
-            Diag\Debug::dumpToFile($paySystem, "callback update paySystem", '/raiffeisenpay_logs.log');
-            Diag\Debug::dumpToFile($paySystem->getConsumerName(), "callback update paySystem->getConsumerName()", '/raiffeisenpay_logs.log');
-            
-            // echo '<pre>'; var_dump($paySystem->getConsumerName()); echo '</pre>';
-            ['PROVIDER_VALUE' => $secretKey] = BusinessValue::getMapping('SELLER_SECRET',    $paySystem->getConsumerName());
-            ['PROVIDER_VALUE' => $publicKey] = BusinessValue::getMapping('SELLER_PUBLIC_ID', $paySystem->getConsumerName());
-            ['PROVIDER_VALUE' => $isTest]    = BusinessValue::getMapping('TEST_MODE',        $paySystem->getConsumerName());
-            ['PROVIDER_VALUE' => $callback]  = BusinessValue::getMapping('SELLER_CALLBACK',  $paySystem->getConsumerName());
-            // echo '<pre>'; var_dump($isTest); echo '</pre>';
-            Diag\Debug::dumpToFile($secretKey, "callback update secretKey", '/raiffeisenpay_logs.log');
-            Diag\Debug::dumpToFile($publicKey, "callback update publicKey", '/raiffeisenpay_logs.log');
-            Diag\Debug::dumpToFile($callback,  "callback update callback",  '/raiffeisenpay_logs.log');
-            try {
-                if($secretKey && $publicKey && $callback) {
-                    $host = $isTest === 'yes' ? \Raiffeisen\Ecom\Client::HOST_TEST : \Raiffeisen\Ecom\Client::HOST_PROD;
-                    $client = new \Raiffeisen\Ecom\Client($secretKey, $publicKey, $host);
-                    $result = $client->postCallbackUrl($callback);
-                    Diag\Debug::dumpToFile($result,  "callback update result",  '/raiffeisenpay_logs.log');
-                }
-                elseif($new['PAY_SYSTEM_ID'] && !$old['PAY_SYSTEM_ID']) {
-                    Manager::update($id, []);
-                }
-            }
-            catch (Exception $e) {
-                Diag\Debug::dumpToFile($e, "callback update exception", '/raiffeisenpay_logs.log');
-            }
-        }
-    }
-
-    public static function OnAfterAdd(\Bitrix\Main\Event $event)
-    {
-        Diag\Debug::dumpToFile($event, "OnAfterAdd event", '/raiffeisenpay_logs.log');
-    }
-
 	/**
 	 * @param Request $request
 	 * @param $paySystemId
@@ -82,8 +41,6 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
 	protected static function isMyResponseExtended(Request $request, $paySystemId)
 	{
         $order = Sale\Order::loadByAccountNumber($request->get("transaction")['orderId']);
-        Diag\Debug::dumpToFile($paySystemId, "isMyResponseExtended() paySystemId", '/raiffeisenpay_logs.log');
-        Diag\Debug::dumpToFile($order, "isMyResponseExtended() order", '/raiffeisenpay_logs.log');
 		return $order->getField('PAY_SYSTEM_ID') == $paySystemId;
 	}
 
@@ -145,17 +102,33 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     public function initiatePay(Sale\Payment $payment, Request $request = null)
     {
         $accountNumber = $payment->getOrder()->getFieldValues()['ACCOUNT_NUMBER'];
+        $paySystem = Manager::getObjectById($payment->getPaymentSystemId());
+        $consumerName = $paySystem->getConsumerName();
         $this->setExtraParams([
             'ACCOUNT_NUMBER' => $accountNumber,
             'PAYMENT_ID' => $payment->getId(),
         ]);
-        Diag\Debug::dumpToFile($payment, "initiatePay payment", '/raiffeisenpay_logs.log');
+
+        try {
+            $sellerSecret   = BusinessValue::getMapping('SELLER_SECRET',    $consumerName)['PROVIDER_VALUE'];
+            $sellerPublicId = BusinessValue::getMapping('SELLER_PUBLIC_ID', $consumerName)['PROVIDER_VALUE'];
+            $testMode       = BusinessValue::getMapping('TEST_MODE',        $consumerName)['PROVIDER_VALUE'];
+            $sellerCallback = BusinessValue::getMapping('SELLER_CALLBACK',  $consumerName)['PROVIDER_VALUE'];
+            if($sellerSecret && $sellerPublicId && $sellerCallback) {
+                $host = $testMode === 'yes' ? \Raiffeisen\Ecom\Client::HOST_TEST : \Raiffeisen\Ecom\Client::HOST_PROD;
+                $client = new \Raiffeisen\Ecom\Client($sellerSecret, $sellerPublicId, $host);
+                $result = $client->postCallbackUrl($sellerCallback);
+            }
+        }
+        catch (Exception $e) {
+            $this->log('EXCEPTION', ['exception' => $e]);
+        }
+
         return $this->showTemplate($payment, "template");
     }
 
     public function getPaymentIdFromRequest(Request $request)
     {
-        Diag\Debug::dumpToFile($request, "getPaymentIdFromRequest request", '/raiffeisenpay_logs.log');
         $pid = $request->get('id');
         if ($pid) {
             return $pid;
@@ -240,7 +213,6 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     {
         $result = new ServiceResult();
         $action = $request->get('transaction')['status']['value'];
-        Diag\Debug::dumpToFile($request->get('transaction'), "processRequestCustom request->transaction", '/raiffeisenpay_logs.log');
 
         switch ($action) {
             case 'SUCCESS':
@@ -269,7 +241,6 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     {
         $result = new ServiceResult();
         //$this->initialise($payment);
-        Diag\Debug::dumpToFile($request->get("transaction"), "processSuccessAction request->transaction", '/raiffeisenpay_logs.log');
 
 
         $billInfo = true; //$this->checkBill($payment->getField('PS_INVOICE_ID'), $result);
@@ -279,16 +250,12 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
             switch ($request->get("transaction")['status']['value']) {
                 case 'SUCCESS':
                     $order = Sale\Order::loadByAccountNumber($request->get("transaction")['orderId']);
-                    Diag\Debug::dumpToFile($order, "order", '/raiffeisenpay_logs.log');
                     $paymentCollection = $order->getPaymentCollection();
-                    Diag\Debug::dumpToFile($paymentCollection, "paymentCollection", '/raiffeisenpay_logs.log');
                     foreach ($paymentCollection as $_payment_) {
-                        Diag\Debug::dumpToFile($_payment_, "paymentCollection loop", '/raiffeisenpay_logs.log');
                         $sum  = $_payment_->getSum(); // сумма к оплате
 
                         $psID = $_payment_->getPaymentSystemId();
 
-                        Diag\Debug::dumpToFile($psID == $payment->getField('PAY_SYSTEM_ID') && $sum == $request->get("transaction")['amount'], "paymentCollection loop condition", '/raiffeisenpay_logs.log');
                         if ($psID == $payment->getField('PAY_SYSTEM_ID') && $sum == $request->get("transaction")['amount']) {
                             $_payment_->setPaid("Y");
                             //$setField = $_payment_->setField('PS_INVOICE_ID', $request->get("transaction")['id']);
@@ -297,7 +264,6 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                             //                    }
                             $order->setField('STATUS_ID', 'P');
                             $order_save_result = $order->save();
-                            Diag\Debug::dumpToFile($order_save_result, "order save result", '/raiffeisenpay_logs.log');
                         }
                     }
                     break;

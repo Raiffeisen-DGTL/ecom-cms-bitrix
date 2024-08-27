@@ -22,20 +22,13 @@ try {
 	if (CModule::IncludeModule("sale")) {
 		$context = Application::getInstance()->getContext();
 		$input = file_get_contents('php://input');
-		Diag\Debug::dumpToFile($input, "input", '/raiffeisenpay_logs.log');
 		$request = new HttpRequest(new Server($_SERVER), [], Json::decode(file_get_contents('php://input')), [], []);
 		$item    = PaySystem\Manager::searchByRequest($request);
-
-		Diag\Debug::dumpToFile($request, "request", '/raiffeisenpay_logs.log');
-		Diag\Debug::dumpToFile($item, "item", '/raiffeisenpay_logs.log');
 		if ($item !== false) {
 			$service = new PaySystem\Service($item);
 			$handler = new ruraiffeisen_raiffeisenpayHandler(ServiceResult::MONEY_COMING, $service);
-			Diag\Debug::dumpToFile($service, "service", '/raiffeisenpay_logs.log');
-			Diag\Debug::dumpToFile($handler, "handler", '/raiffeisenpay_logs.log');
 
 			$result = $handler->processRequestCustom($service, $request);
-			Diag\Debug::dumpToFile($result, "result", '/raiffeisenpay_logs.log');
 			$data   = $result->getData()['BACK_URL'];
 			if (!empty($data) && isset($data['BACK_URL'])) {
 				LocalRedirect($data['BACK_URL']);
@@ -53,5 +46,5 @@ try {
 	die();
 }
 catch (Exception  $e) {
-	Diag\Debug::dumpToFile($e, "", '/raiffeisenpay_logs.log');
+	PaySystem\Logger::addDebugInfo('Callback failed: ' . $e);
 }
