@@ -78,7 +78,7 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
         $bItems[] = [
             "name"            => $item->getField('NAME'),
             "price"           => $item->getField('PRICE'),
-            "quantity"        => (int) $item->getField('QUANTITY'),
+            "quantity"        => round($item->getField('QUANTITY'), 2),
             "amount"          => $item->getFinalPrice(),
             "paymentObject"   => "COMMODITY",
             "paymentMode"     => "FULL_PAYMENT",
