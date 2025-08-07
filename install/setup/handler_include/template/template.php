@@ -48,7 +48,9 @@ catch (ArgumentNullException $e) {
 $userID    = $order->getUserId();
 $userName  = \Bitrix\Main\Engine\CurrentUser::get()->getFullName();
 $userEmail = \Bitrix\Main\Engine\CurrentUser::get()->getEmail();
-$orderID   = $params["ACCOUNT_NUMBER"];
+$orderID   = $params["ACCOUNT_NUMBER"] . '-' . $params["PAYMENT_ID"];
+$accountNumber = $params["ACCOUNT_NUMBER"];
+$debug = $params["DEBUG"];
 
 $paySum = 0;
 foreach($order->getPaymentCollection()->getIterator() as $payment) {
@@ -66,6 +68,10 @@ $receipt["receiptNumber"]     = $orderID;
 $receipt["customer"]["email"] = $userEmail;
 //$receipt["customer"]["name"] = $userName;
 
+Diag\Debug::dumpToFile($_SERVER["HTTP_USER_AGENT"],  "HTTP_USER_AGENT",  '/raiffeisenpay_logs.log');
+Diag\Debug::dumpToFile($orderID,  "orderID",  '/raiffeisenpay_logs.log');
+// Diag\Debug::dumpToFile($order,  "Order",  '/raiffeisenpay_logs.log');
+// Diag\Debug::dumpToFile($params['SELLER_FISCALIZATION'],  "SELLER_FISCALIZATION",  '/raiffeisenpay_logs.log');
 if ($params['SELLER_FISCALIZATION'] === 'on') {
     $basket = $order->getBasket();
 
@@ -99,6 +105,8 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
     }
 
     $receipt["items"] = $bItems;
+
+    $receipt["total"] = $order->getPrice();
 }
 
 /*
@@ -107,6 +115,8 @@ $receipt["payments"][] = [
 "amount" => $paySum,
 ];
 */
+
+// Diag\Debug::dumpToFile($receipt,  "receipt",  '/raiffeisenpay_logs.log');
 
 if (array_key_exists('ORDER_LIFETIME', $params)) {
     $expPeriod = intval($params["ORDER_LIFETIME"]);
@@ -182,6 +192,7 @@ else {
     <? endif ?>
     <input name="expirationDate" id="expirationDate"
         value="<?= $expTime ? $expTime->format('Y-m-d') . "T" . $expTime->format('H:i:sP') : '' ?>" style="width: 200px;" />
+    <input name="orderAccountNumber" id="orderAccountNumber" value="<?= $accountNumber ?>" style="width: 200px;" />
     <input id="paymentDetails" name="paymentDetails" value="<?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_ORDER_PAYMENT') ?> <?= $orderID ?>" type="hidden" />
     <textarea type="text" id="receipt" name="receipt" rows="20"
         style="width: 300px"><?= \Bitrix\Main\Web\Json::encode($receipt) ?></textarea>
@@ -213,12 +224,13 @@ else {
                         <? if ($params['SELLER_METHOD'] !== 'both'): ?>
                             paymentMethod: "<?= $params['SELLER_METHOD'] == 'sbp' ? 'ONLY_SBP' : 'ONLY_ACQUIRING' ?>",
                         <? endif; ?>
-                        <? if ($params['SELLER_FISCALIZATION'] === 'on'): ?>
+                        <? if ($params['SELLER_FISCALIZATION'] === 'on' && false): ?>
                             receipt: paymentData.receipt,
                         <? endif; ?>
                         ...(paymentData.expirationDate ? { expirationDate: paymentData.expirationDate } : {}),
                         extra: {
                             email: paymentData.receipt.customer.email,
+                            orderAccountNumber: paymentData.orderAccountNumber,
                         },
                     })
                         .then(function (result) {
@@ -240,12 +252,13 @@ else {
                         <? if ($params['SELLER_METHOD'] !== 'both'): ?>
                             paymentMethod: "<?= $params['SELLER_METHOD'] == 'sbp' ? 'ONLY_SBP' : 'ONLY_ACQUIRING' ?>",
                         <? endif; ?>
-                        <? if ($params['SELLER_FISCALIZATION'] === 'on'): ?>
+                        <? if ($params['SELLER_FISCALIZATION'] === 'on' && false): ?>
                             receipt: paymentData.receipt,
                         <? endif; ?>
                         ...(paymentData.expirationDate ? { expirationDate: paymentData.expirationDate } : {}),
                         extra: {
                             email: paymentData.receipt.customer.email,
+                            orderAccountNumber: paymentData.orderAccountNumber,
                         },
                         successUrl: paymentData.successUrl,
                         failUrl: paymentData.failUrl,
@@ -282,7 +295,8 @@ else {
                     paymentMethod: document.getElementById('paymentMethod').value,
                     locale: "RU",
                     expirationDate: document.getElementById('expirationDate').value,
-                    paymentDetails: paymentDetails
+                    paymentDetails: paymentDetails,
+                    orderAccountNumber: document.getElementById('orderAccountNumber').value
                 };
 
                 //result.extra = extraString ? JSON.parse(extraString) : '';
