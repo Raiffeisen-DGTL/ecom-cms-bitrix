@@ -110,6 +110,13 @@ class Client
     const POST = 'POST';
 
     /**
+     * The API put method.
+     *
+     * @const string
+     */
+    const PUT = 'PUT';
+
+    /**
      * The API delete method.
      *
      * @const string
@@ -121,14 +128,14 @@ class Client
      *
      * @const string
      */
-    const HOST_PROD = 'https://e-commerce.raiffeisen.ru';
+    const HOST_PROD = 'https://pay.raif.ru';
 
     /**
      * The test API host.
      *
      * @const string
      */
-    const HOST_TEST = 'https://test.ecom.raiffeisen.ru';
+    const HOST_TEST = 'https://pay-test.raif.ru';
 
     /**
      * The default URL to payment form.
@@ -566,6 +573,53 @@ class Client
 
     }//end getOrderRefundReceipt()
 
+    /**
+     * Создание чека продажи.
+     *
+     * @param string       $receiptNumber Уникальный номер чека.
+     * @param string       $email         Электронная почта покупателя.
+     * @param array        $items         Позиции чека.
+     * @param numeric      $total         Итоговая сумма чека.
+     * @param array|null   $payments      Данные об оплате (необязательно).
+     * @param string       $baseUrl       Базовый URL фискального API.
+     *
+     * @return array Результат запроса.
+     *
+     * @throws ClientException
+     */
+    public function postReceiptSell($receiptNumber, $email, array $items, $total, array $payments = null, $baseUrl = self::FISCAL_API_URI)
+    {
+        $url = $baseUrl . '/receipts/sell';
+        $body = [
+            'receiptNumber' => $receiptNumber,
+            'client'        => [ 'email' => $email],
+            'items'         => $items,
+            'total'         => $total
+        ];
+        
+        if ($payments !== null) {
+            $body['payments'] = $payments;
+        }
+        
+        return $this->requestBuilder($url, self::POST, $body);
+    }
+
+    /**
+     * Регистрация чека продажи.
+     *
+     * @param string $receiptNumber Уникальный номер чека для регистрации.
+     * @param string $baseUrl Базовый URL фискального API.
+     *
+     * @return array Результат запроса.
+     *
+     * @throws ClientException
+     */
+    public function registerReceiptSell($receiptNumber, $baseUrl = self::FISCAL_API_URI)
+    {
+        $url = $baseUrl . '/receipts/sell/' . urlencode($receiptNumber);
+        
+        return $this->requestBuilder($url, self::PUT, []);
+    }
 
     /**
      * Build request.
@@ -597,7 +651,7 @@ class Client
                 ]
             );
         }
-        file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($headers,1),FILE_APPEND);
+        // file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($headers,1),FILE_APPEND);
         curl_setopt_array(
             $curl,
             [
@@ -608,10 +662,10 @@ class Client
                 CURLOPT_RETURNTRANSFER => 1,
             ]
         );
-        file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($this->host.$url,1),FILE_APPEND);
+        // file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($this->host.$url,1),FILE_APPEND);
         $response = curl_exec($curl);
-        file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($response,1),FILE_APPEND);
-        file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r( curl_getinfo($curl, CURLINFO_RESPONSE_CODE),1),FILE_APPEND);
+        // file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($response,1),FILE_APPEND);
+        // file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r( curl_getinfo($curl, CURLINFO_RESPONSE_CODE),1),FILE_APPEND);
         if (false === $response) {
             throw new ClientException($curl, curl_error($curl), curl_getinfo($curl, CURLINFO_RESPONSE_CODE));
         }
