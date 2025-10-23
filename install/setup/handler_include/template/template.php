@@ -48,6 +48,8 @@ catch (ArgumentNullException $e) {
 $userID    = $order->getUserId();
 $userName  = \Bitrix\Main\Engine\CurrentUser::get()->getFullName();
 $userEmail = \Bitrix\Main\Engine\CurrentUser::get()->getEmail();
+$orderEmail = $order->getPropertyCollection()->getUserEmail()->getValue();
+$email = $orderEmail;
 $orderID   = $params["ACCOUNT_NUMBER"] . '-' . $params["PAYMENT_ID"];
 $accountNumber = $params["ACCOUNT_NUMBER"];
 $debug = $params["DEBUG"];
@@ -65,10 +67,10 @@ foreach($order->getPaymentCollection()->getIterator() as $payment) {
 $receipt = [];
 
 $receipt["receiptNumber"]     = $orderID;
-$receipt["customer"]["email"] = $userEmail;
+$receipt["customer"]["email"] = $email;
 //$receipt["customer"]["name"] = $userName;
 
-Diag\Debug::dumpToFile($_SERVER["HTTP_USER_AGENT"],  "HTTP_USER_AGENT",  '/raiffeisenpay_logs.log');
+// Diag\Debug::dumpToFile($_SERVER["HTTP_USER_AGENT"],  "HTTP_USER_AGENT",  '/raiffeisenpay_logs.log');
 Diag\Debug::dumpToFile($orderID,  "orderID",  '/raiffeisenpay_logs.log');
 // Diag\Debug::dumpToFile($order,  "Order",  '/raiffeisenpay_logs.log');
 // Diag\Debug::dumpToFile($params['SELLER_FISCALIZATION'],  "SELLER_FISCALIZATION",  '/raiffeisenpay_logs.log');
@@ -96,7 +98,7 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
 
     if ($order->getDeliveryPrice() > 0) {
         $bItems[] = [
-            "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_DELIVERY'),
+            "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_DELIVERY'),
             "price"    => $order->getDeliveryPrice(),
             "quantity" => 1,
             "amount"   => $order->getDeliveryPrice(),
@@ -175,9 +177,9 @@ else {
 <form method="POST" name="redirectToAcsForm" id="form" target="_blank" style="display: none">
     <input name="amount" id="amount" value="<?= $paySum ?>" type="hidden" />
     <input name="orderId" id="orderId" value="<?= $orderID ?>" id="order" type="hidden" />
-    <input name="successUrl" id="successUrl" value="<?= ($_SERVER["SERVER_NAME"] . $params['BACK_URI_SUCCESS']) ?>"
+    <input name="successUrl" id="successUrl" value="<?= ($_SERVER["REQUEST_SCHEME"] . '://' . $_SERVER["HTTP_HOST"] . $params['BACK_URI_SUCCESS']) ?>"
         type="hidden" />
-    <input name="failUrl" id="failUrl" value="<?= ($_SERVER["SERVER_NAME"] . $params['BACK_URI_FAIL']) ?>"
+    <input name="failUrl" id="failUrl" value="<?= ($_SERVER["REQUEST_SCHEME"] . '://' . $_SERVER["HTTP_HOST"] . $params['BACK_URI_FAIL']) ?>"
         type="hidden" />
     <input name="publicId" id="publicId" value="<?= $params["SELLER_PUBLIC_ID"] ?>" type="hidden" />
     <input name="paymentMethod" id="paymentMethod" value="<?= $params["SELLER_METHOD"] ?>" type="hidden" />
@@ -193,12 +195,12 @@ else {
     <input name="expirationDate" id="expirationDate"
         value="<?= $expTime ? $expTime->format('Y-m-d') . "T" . $expTime->format('H:i:sP') : '' ?>" style="width: 200px;" />
     <input name="orderAccountNumber" id="orderAccountNumber" value="<?= $accountNumber ?>" style="width: 200px;" />
-    <input id="paymentDetails" name="paymentDetails" value="<?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_ORDER_PAYMENT') ?> <?= $orderID ?>" type="hidden" />
+    <input id="paymentDetails" name="paymentDetails" value="<?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_ORDER_PAYMENT') ?> <?= $orderID ?>" type="hidden" />
     <textarea type="text" id="receipt" name="receipt" rows="20"
         style="width: 300px"><?= \Bitrix\Main\Web\Json::encode($receipt) ?></textarea>
 </form>
 
-<button class="button-pay" id="openPopup"><?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_OPEN_PAYMENT_POPUP') ?></button>
+<button class="button-pay" id="openPopup"><?= Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_OPEN_PAYMENT_POPUP') ?></button>
 
 <div id="portal"></div>
 
@@ -231,6 +233,7 @@ else {
                         extra: {
                             email: paymentData.receipt.customer.email,
                             orderAccountNumber: paymentData.orderAccountNumber,
+                            apiClient: "Raifpay Bitrix",
                         },
                     })
                         .then(function (result) {
@@ -259,6 +262,7 @@ else {
                         extra: {
                             email: paymentData.receipt.customer.email,
                             orderAccountNumber: paymentData.orderAccountNumber,
+                            apiClient: "Raifpay Bitrix",
                         },
                         successUrl: paymentData.successUrl,
                         failUrl: paymentData.failUrl,
