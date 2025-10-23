@@ -12,6 +12,7 @@ use Bitrix\Main\Web\Json;
 use Bitrix\Main\Diag;
 use Bitrix\Sale\Payment;
 use Bitrix\Main\Loader;
+use Bitrix\Main\Type\Date;
 use Bitrix\Sale\BusinessValue;
 use Bitrix\Sale\Internals\PaySystemActionTable;
 use Bitrix\Sale\PaySystem\Manager;
@@ -124,6 +125,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
             if($sellerSecret && $sellerPublicId && $sellerCallback) {
                 $host = $testMode === 'yes' ? \Raiffeisen\Ecom\Client::HOST_TEST : \Raiffeisen\Ecom\Client::HOST_PROD;
                 $client = new \Raiffeisen\Ecom\Client($sellerSecret, $sellerPublicId, $host);
+                $result = $client->postCallbackUrl($sellerCallback);
             }
         }
         catch (Exception $e) {
@@ -319,7 +321,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                 
                                     if ($order->getDeliveryPrice() > 0) {
                                         $bItems[] = [
-                                            "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_DELIVERY'),
+                                            "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_DELIVERY'),
                                             "price"    => $order->getDeliveryPrice(),
                                             "quantity" => 1,
                                             "amount"   => $order->getDeliveryPrice(),
@@ -328,10 +330,16 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                     }
                                     /// /Items
 
-                                    $postReceiptResult = $client->postReceiptSell($orderId . '-' . $_payment_->getField('ID'), $email, $bItems, $order->getPrice());
+                                    $receiptNumber = $orderId . '-' . $_payment_->getField('ID');
+
+                                    $postReceiptResult = $client->postReceiptSell($receiptNumber, $email, $bItems, $order->getPrice());
                                     Diag\Debug::dumpToFile($postReceiptResult,  "postReceiptResult",  '/raiffeisenpay_logs.log');
-                                    $registerReceiptResult = $client->registerReceiptSell($orderId . '-' . $_payment_->getField('ID'));
+                                    $registerReceiptResult = $client->registerReceiptSell($receiptNumber);
                                     Diag\Debug::dumpToFile($registerReceiptResult,  "registerReceiptResult",  '/raiffeisenpay_logs.log');
+                                    
+                                    $_payment_->setField('PAY_VOUCHER_NUM', $receiptNumber);
+                                    $_payment_->setField('PAY_VOUCHER_DATE', Date::createFromTimestamp(time()));
+                                    $order_save_result = $order->save();
                                 }
                             }
                             catch (\Exception $e) {
@@ -534,7 +542,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
 
         if ($order->getDeliveryPrice() > 0) {
             $items[] = [
-                "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_SBERBANK_DELIVERY'),
+                "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_DELIVERY'),
                 "price"    => $order->getDeliveryPrice(),
                 "quantity" => 1,
                 "amount"   => $order->getDeliveryPrice(),
