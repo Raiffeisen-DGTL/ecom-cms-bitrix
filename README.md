@@ -1,4 +1,4 @@
-# Bitrix Payment для кодировки UTF8
+# Bitrix Payment
 
 ## Установка
 
