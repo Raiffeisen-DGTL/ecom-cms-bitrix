@@ -332,7 +332,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
 
                                     $receiptNumber = $orderId . '-' . $_payment_->getField('ID');
 
-                                    $postReceiptResult = $client->postReceiptSell($receiptNumber, $email, $bItems, $order->getPrice());
+                                    $postReceiptResult = $client->postReceiptSell($receiptNumber, $email, $bItems, number_format($order->getPrice(), 2, '.', ''));
                                     Diag\Debug::dumpToFile($postReceiptResult,  "postReceiptResult",  '/raiffeisenpay_logs.log');
                                     $registerReceiptResult = $client->registerReceiptSell($receiptNumber);
                                     Diag\Debug::dumpToFile($registerReceiptResult,  "registerReceiptResult",  '/raiffeisenpay_logs.log');
