@@ -85,9 +85,9 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
     foreach ($basketItems as $item) {
         $bItems[] = [
             "name"            => $item->getField('NAME'),
-            "price"           => $item->getField('PRICE'),
+            "price"           => number_format($item->getField('PRICE'), 2, '.', ''),
             "quantity"        => (int) $item->getField('QUANTITY'),
-            "amount"          => $item->getFinalPrice(),
+            "amount"          => number_format($item->getFinalPrice(), 2, '.', ''),
             "paymentObject"   => "COMMODITY",
             "paymentMode"     => "FULL_PAYMENT",
             "measurementUnit" => "OTHER",
@@ -99,9 +99,9 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
     if ($order->getDeliveryPrice() > 0) {
         $bItems[] = [
             "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_DELIVERY'),
-            "price"    => $order->getDeliveryPrice(),
+            "price"    => number_format($order->getDeliveryPrice(), 2, '.', ''),
             "quantity" => 1,
-            "amount"   => $order->getDeliveryPrice(),
+            "amount"   => number_format($order->getDeliveryPrice(), 2, '.', ''),
             "vatType"  => $vatType,
         ];
     }

@@ -308,9 +308,9 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                     foreach ($basketItems as $item) {
                                         $bItems[] = [
                                             "name"            => $item->getField('NAME'),
-                                            "price"           => $item->getField('PRICE'),
+                                            "price"           => number_format($item->getField('PRICE'), 2, '.', ''),
                                             "quantity"        => (int) $item->getField('QUANTITY'),
-                                            "amount"          => $item->getFinalPrice(),
+                                            "amount"          => number_format($item->getFinalPrice(), 2, '.', ''),
                                             "paymentObject"   => "COMMODITY",
                                             "paymentMode"     => "FULL_PAYMENT",
                                             "measurementUnit" => "OTHER",
@@ -322,9 +322,9 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                     if ($order->getDeliveryPrice() > 0) {
                                         $bItems[] = [
                                             "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_DELIVERY'),
-                                            "price"    => $order->getDeliveryPrice(),
+                                            "price"    => number_format($order->getDeliveryPrice(), 2, '.', ''),
                                             "quantity" => 1,
-                                            "amount"   => $order->getDeliveryPrice(),
+                                            "amount"   => number_format($order->getDeliveryPrice(), 2, '.', ''),
                                             "vatType"  => $vatType,
                                         ];
                                     }
@@ -532,9 +532,9 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
         foreach ($basket as $basketItem) {
             $items[] = [
                 'name'        => $basketItem->getField('NAME'),
-                'price'       => $basketItem->getPrice(),
+                'price'       => number_format($basketItem->getPrice(), 2, '.', ''),
                 'quantity'    => $basketItem->getQuantity(),
-                'amount'      => $basketItem->getFinalPrice(),
+                'amount'      => number_format($basketItem->getFinalPrice(), 2, '.', ''),
                 "paymentMode" => "FULL_PREPAYMENT",
                 "vatType"     => $this->vat,
             ];
@@ -543,9 +543,9 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
         if ($order->getDeliveryPrice() > 0) {
             $items[] = [
                 "name"     => Loc::getMessage('SALE_HANDLERS_PAY_SYSTEM_DELIVERY'),
-                "price"    => $order->getDeliveryPrice(),
+                "price"    => number_format($order->getDeliveryPrice(), 2, '.', ''),
                 "quantity" => 1,
-                "amount"   => $order->getDeliveryPrice(),
+                "amount"   => number_format($order->getDeliveryPrice(), 2, '.', ''),
                 "vatType"  => $this->vat
             ];
         }
@@ -559,7 +559,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
         $amount   = $refundableSum;
         $client   = new \Raiffeisen\Ecom\Client($this->secretKey, $this->publicKey, \Raiffeisen\Ecom\Client::HOST_TEST);
 
-        $response = $client->postOrderRefund($orderId, $refundId, $amount, array("customer" => ["email" => $rsUser['EMAIL'],], "items" => $items));
+        $response = $client->postOrderRefund($orderId, $refundId, number_format($amount, 2, '.', ''), array("customer" => ["email" => $rsUser['EMAIL'],], "items" => $items));
         if ($response['refundStatus'] == "COMPLETED") {
             $result->setOperationType(ServiceResult::MONEY_LEAVING);
             $payment->setPaid("N");
