@@ -587,14 +587,15 @@ class Client
      *
      * @throws ClientException
      */
-    public function postReceiptSell($receiptNumber, $email, array $items, $total, array $payments = null, $baseUrl = self::FISCAL_API_URI)
+    public function postReceiptSell($receiptNumber, $email, array $items, $total, array $payments = null, $orderNumber, $baseUrl = self::FISCAL_API_URI)
     {
         $url = $baseUrl . '/receipts/sell';
         $body = [
             'receiptNumber' => $receiptNumber,
             'client'        => [ 'email' => $email],
             'items'         => $items,
-            'total'         => $total
+            'total'         => $total,
+            'orderNumber'   => $orderNumber,
         ];
         
         if ($payments !== null) {

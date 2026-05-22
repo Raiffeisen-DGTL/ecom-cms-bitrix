@@ -568,6 +568,60 @@ class Client
 
 
     /**
+     * Создание чека продажи.
+     *
+     * @param string       $receiptNumber Уникальный номер чека.
+     * @param string       $email         Электронная почта покупателя.
+     * @param array        $items         Позиции чека.
+     * @param numeric      $total         Итоговая сумма чека.
+     * @param array|null   $payments      Данные об оплате (необязательно).
+     * @param string       $orderNumber   Идентификатор заказа в системе Raiffeisen.
+     * @param string       $baseUrl       Базовый URL фискального API.
+     *
+     * @return array Результат запроса.
+     *
+     * @throws ClientException
+     */
+    public function postReceiptSell($receiptNumber, $email, array $items, $total, array $payments = null, $orderNumber, $baseUrl = self::FISCAL_API_URI)
+    {
+        $url = $baseUrl . '/receipts/sell';
+        $body = [
+            'receiptNumber' => $receiptNumber,
+            'client'        => [ 'email' => $email],
+            'items'         => $items,
+            'total'         => $total,
+            'orderNumber'   => $orderNumber,
+        ];
+
+        if ($payments !== null) {
+            $body['payments'] = $payments;
+        }
+
+        return $this->requestBuilder($url, self::POST, $body);
+
+    }//end postReceiptSell()
+
+
+    /**
+     * Регистрация чека продажи.
+     *
+     * @param string $receiptNumber Уникальный номер чека для регистрации.
+     * @param string $baseUrl Базовый URL фискального API.
+     *
+     * @return array Результат запроса.
+     *
+     * @throws ClientException
+     */
+    public function registerReceiptSell($receiptNumber, $baseUrl = self::FISCAL_API_URI)
+    {
+        $url = $baseUrl . '/receipts/sell/' . urlencode($receiptNumber);
+
+        return $this->requestBuilder($url, self::PUT, []);
+
+    }//end registerReceiptSell()
+
+
+    /**
      * Build request.
      *
      * @param string $url    The url.
