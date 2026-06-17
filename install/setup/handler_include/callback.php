@@ -15,6 +15,7 @@ define('NO_AGENT_CHECK', true);
 define('NOT_CHECK_PERMISSIONS', true);
 define("DisableEventsCheck", true);
 require($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_before.php");
+include_once(dirname(__FILE__) . "/handler.php");
 
 global $APPLICATION;
 

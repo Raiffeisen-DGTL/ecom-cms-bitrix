@@ -12,7 +12,8 @@ def check_dirpath(dirpath: Path) -> bool:
 
 def check_filename(filename: Path) -> bool:
     # Точное совпадение для README.md, .gitignore, .py и .log файлы
-    return not (filename.name == '.gitignore' or 
+    return not (filename.name == '.gitignore' or
+                filename.name == 'AGENTS.md' or
                 filename.suffix == '.py' or 
                 filename.suffix == '.log')
 
