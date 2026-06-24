@@ -185,7 +185,7 @@ else {
     <input name="paymentMethod" id="paymentMethod" value="<?= $params["SELLER_METHOD"] ?>" type="hidden" />
     <? if ($formStyles): ?>
         <script>
-            const styleForm = <?= $formStyles ?>; 
+            const styleForm = <?= \Bitrix\Main\Web\Json::encode($formStyles) ?>; 
         </script>
     <? else: ?>
         <script>

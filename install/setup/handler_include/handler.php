@@ -556,7 +556,17 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
         Loader::includeModule("ruraiffeisen_raiffeisenpay");
 
         $orderId  = $order->getField('ID');
-        $refundId = sha1(time() * rand(1, 99));
+        $refundId = sprintf(
+            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+            random_int(0, 0xffff),
+            random_int(0, 0xffff),
+            random_int(0, 0xffff),
+            random_int(0, 0x0fff) | 0x4000,
+            random_int(0, 0x3fff) | 0x8000,
+            random_int(0, 0xffffffff),
+            random_int(0, 0xffffffff),
+            random_int(0, 0xffffffff)
+        );
         $amount   = $refundableSum;
         $client   = new \Raiffeisen\Ecom\Client($this->secretKey, $this->publicKey, \Raiffeisen\Ecom\Client::HOST_TEST);
 

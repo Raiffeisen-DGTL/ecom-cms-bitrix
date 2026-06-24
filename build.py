@@ -14,6 +14,8 @@ def check_filename(filename: Path) -> bool:
     # Точное совпадение для README.md, .gitignore, .py и .log файлы
     return not (filename.name == '.gitignore' or
                 filename.name == 'AGENTS.md' or
+                filename.name == 'README.md' or
+                filename.name == '.gitlab-ci.yml' or
                 filename.suffix == '.py' or 
                 filename.suffix == '.log')
 
@@ -53,7 +55,7 @@ def main():
 
     subbuild_path = BUILD_PATH / '.last_version'
     subbuild_path.mkdir(parents=True, exist_ok=True)
-    copy_files_to_build_dir(filenames, subbuild_path, 'cp1251')
+    copy_files_to_build_dir(filenames, subbuild_path, 'utf-8')
     create_archive(BUILD_PATH / '.last_version.zip', subbuild_path, '.last_version')
 
     subbuild_path = BUILD_PATH / 'raiffeisenpay-cp1251'
