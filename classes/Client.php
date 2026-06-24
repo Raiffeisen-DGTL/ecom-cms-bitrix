@@ -651,7 +651,6 @@ class Client
                 ]
             );
         }
-        file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($headers,1),FILE_APPEND);
         curl_setopt_array(
             $curl,
             [
@@ -662,10 +661,7 @@ class Client
                 CURLOPT_RETURNTRANSFER => 1,
             ]
         );
-        file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($this->host.$url,1),FILE_APPEND);
         $response = curl_exec($curl);
-        file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r($response,1),FILE_APPEND);
-        file_put_contents($_SERVER["DOCUMENT_ROOT"]."/log_paid.php","\n".Date("H:i:s: ").print_r( curl_getinfo($curl, CURLINFO_RESPONSE_CODE),1),FILE_APPEND);
         if (false === $response) {
             throw new ClientException($curl, curl_error($curl), curl_getinfo($curl, CURLINFO_RESPONSE_CODE));
         }
