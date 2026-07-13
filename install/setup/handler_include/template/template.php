@@ -80,7 +80,8 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
     $basketItems = $basket->getBasketItems();
     $bItems      = [];
 
-    $vatType = $params["SELLER_VAT"] === "NONE" ? "NONE" : ("VAT" . $params["SELLER_VAT"]);
+    $paymentMode = $params['SELLER_PAYMENT_MODE'] ?: 'FULL_PAYMENT';
+    $vatType     = $params["SELLER_VAT"] === "NONE" ? "NONE" : ("VAT" . $params["SELLER_VAT"]);
 
     foreach ($basketItems as $item) {
         $bItems[] = [
@@ -89,7 +90,7 @@ if ($params['SELLER_FISCALIZATION'] === 'on') {
             "quantity"        => (int) $item->getField('QUANTITY'),
             "amount"          => number_format($item->getFinalPrice(), 2, '.', ''),
             "paymentObject"   => "COMMODITY",
-            "paymentMode"     => "FULL_PAYMENT",
+            "paymentMode"     => $paymentMode,
             "measurementUnit" => "OTHER",
             //"nomenclatureCode" => $item->getField('PRODUCT_XML_ID'),
             "vatType"  => $vatType,
