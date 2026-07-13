@@ -283,8 +283,9 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                 $sellerSecret   = BusinessValue::getMapping('SELLER_SECRET',        $consumerName)['PROVIDER_VALUE'];
                                 $sellerPublicId = BusinessValue::getMapping('SELLER_PUBLIC_ID',     $consumerName)['PROVIDER_VALUE'];
                                 $testMode       = BusinessValue::getMapping('TEST_MODE',            $consumerName)['PROVIDER_VALUE'];
-                                $sellerVat      = BusinessValue::getMapping('SELLER_VAT',           $consumerName)['PROVIDER_VALUE'];
-                                $fiscalization  = BusinessValue::getMapping('SELLER_FISCALIZATION', $consumerName)['PROVIDER_VALUE'];
+                                $sellerVat         = BusinessValue::getMapping('SELLER_VAT',           $consumerName)['PROVIDER_VALUE'];
+                                $fiscalization     = BusinessValue::getMapping('SELLER_FISCALIZATION', $consumerName)['PROVIDER_VALUE'];
+                                $sellerPaymentMode = BusinessValue::getMapping('SELLER_PAYMENT_MODE', $consumerName)['PROVIDER_VALUE'] ?: 'FULL_PAYMENT';
 
                                 Diag\Debug::dumpToFile($_payment_,  "Payment",  '/raiffeisenpay_logs.log');
                                 Diag\Debug::dumpToFile($_payment_->getField('ACCOUNT_NUMBER'),  "ACCOUNT_NUMBER",  '/raiffeisenpay_logs.log');
@@ -312,7 +313,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                             "quantity"        => (int) $item->getField('QUANTITY'),
                                             "amount"          => number_format($item->getFinalPrice(), 2, '.', ''),
                                             "paymentObject"   => "COMMODITY",
-                                            "paymentMode"     => "FULL_PAYMENT",
+                                            "paymentMode"     => $sellerPaymentMode,
                                             "measurementUnit" => "OTHER",
                                             //"nomenclatureCode" => $item->getField('PRODUCT_XML_ID'),
                                             "vatType"  => $vatType,

@@ -138,6 +138,22 @@ $data = array(
             ]
 
         ),
+        'SELLER_PAYMENT_MODE'  => array(
+            'NAME'  => Loc::getMessage('SALE_HPS_RAIF_PAYMENT_MODE'),
+            'SORT'  => 605,
+            'GROUP' => 'SELLER_COMPANY',
+            'INPUT' => [
+                'TYPE'    => 'ENUM',
+                'OPTIONS' => [
+                    'FULL_PREPAYMENT' => 'FULL_PREPAYMENT',
+                    'FULL_PAYMENT'    => 'FULL_PAYMENT',
+                ]
+            ],
+            'DEFAULT' => [
+                'PROVIDER_VALUE' => 'FULL_PAYMENT',
+                'PROVIDER_KEY'   => 'INPUT'
+            ]
+        ),
         'OPEN_ON_NEW_PAGE'     => array(
             'NAME'    => Loc::getMessage('SALE_HPS_RAIF_OPEN_NEW_PAGE'),
             'SORT'    => 610,

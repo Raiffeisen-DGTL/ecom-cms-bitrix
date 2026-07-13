@@ -6,6 +6,7 @@ $MESS["SALE_HPS_RAIF_VAT"]                 = "НДС";
 $MESS["SALE_HPS_RAIF_POPUP"]               = "Отображать оплату во всплывающем окне";
 $MESS["SALE_HPS_RAIF_METHOD"]              = "Метод оплаты";
 $MESS["SALE_HPS_RAIF_FISCALIZATION"]       = "Фискализация чеков";
+$MESS["SALE_HPS_RAIF_PAYMENT_MODE"]        = "Признак способа расчета";
 $MESS["SALE_HPS_RAIF_STYLES"]              = "Изменить стиль формы оплаты можно перейдя в Настройки -> Настройки модулей -> СБП и Эквайринг от Raif Pay";
 $MESS["SALE_HPS_RAIF_CALLBACK"]            = "URL для настройки callback";
 $MESS["SALE_HPS_RAIF_OPEN_NEW_PAGE"]       = "Открывать в новом окне";

@@ -6,6 +6,7 @@ $MESS["SALE_HPS_RAIF_VAT"]                = "VAT";
 $MESS["SALE_HPS_RAIF_POPUP"]              = "Display payment in a popup window";
 $MESS["SALE_HPS_RAIF_METHOD"]             = "Payment Method";
 $MESS["SALE_HPS_RAIF_FISCALIZATION"]      = "Receipt Fiscalization";
+$MESS["SALE_HPS_RAIF_PAYMENT_MODE"]       = "Payment mode";
 $MESS["SALE_HPS_RAIF_STYLES"]             = "You can change the payment form style by going to Settings -> Module Settings -> Fast Payment System and Acquiring from Raif Pay";
 $MESS["SALE_HPS_RAIF_CALLBACK"]           = "URL for callback setup";
 $MESS["SALE_HPS_RAIF_OPEN_NEW_PAGE"]      = "Open in a new window";
