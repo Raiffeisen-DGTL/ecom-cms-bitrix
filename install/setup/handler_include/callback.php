@@ -54,6 +54,12 @@ try {
 				$sellerSecret = \Bitrix\Sale\BusinessValue::getMapping('SELLER_SECRET', $consumerName)['PROVIDER_VALUE'];
 				$sellerPublicId = \Bitrix\Sale\BusinessValue::getMapping('SELLER_PUBLIC_ID', $consumerName)['PROVIDER_VALUE'];
 				$testMode = \Bitrix\Sale\BusinessValue::getMapping('TEST_MODE', $consumerName)['PROVIDER_VALUE'];
+
+				if (empty($sellerSecret) || empty($sellerPublicId)) {
+					PaySystem\Logger::addDebugInfo('Raiffeisen Callback - Missing seller credentials');
+					http_response_code(403);
+					die('Invalid signature');
+				}
 				
 				$host = $testMode === 'yes' ? \Raiffeisen\Ecom\Client::HOST_TEST : \Raiffeisen\Ecom\Client::HOST_PROD;
 				$client = new \Raiffeisen\Ecom\Client($sellerSecret, $sellerPublicId, $host);

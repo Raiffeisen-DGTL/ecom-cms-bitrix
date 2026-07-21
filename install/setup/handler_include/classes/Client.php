@@ -356,7 +356,7 @@ class Client
         $processedNotificationDataKeys = join(self::VALUE_SEPARATOR, $processedEventData);
         $hash = hash_hmac(self::DEFAULT_ALGORITHM, $processedNotificationDataKeys, $this->secretKey);
 
-        return $hash === $signature;
+        return hash_equals($hash, $signature);
 
     }//end checkEventSignature()
 
