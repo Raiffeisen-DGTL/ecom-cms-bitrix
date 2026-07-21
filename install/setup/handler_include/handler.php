@@ -268,10 +268,12 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                     $paymentCollection = $order->getPaymentCollection();
                     foreach ($paymentCollection as $_payment_) {
                         $sum  = $_payment_->getSum(); // сумма к оплате
+                        $paymentAmount = (int)round((float)$sum * 100);
+                        $requestAmount = (int)round((float)$request->get("transaction")['amount'] * 100);
 
                         $psID = $_payment_->getPaymentSystemId();
 
-                        if ($psID == $payment->getField('PAY_SYSTEM_ID') && $sum == $request->get("transaction")['amount']) {
+                        if ($psID == $payment->getField('PAY_SYSTEM_ID') && $paymentAmount === $requestAmount) {
                             try {
                                 $_payment_->setPaid("Y");
                                 //$setField = $_payment_->setField('PS_INVOICE_ID', $request->get("transaction")['id']);
@@ -568,8 +570,6 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     {
         $this->initialise($payment);
 
-        // file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/log_paid.php", "\n" . Date("H:i:s: ") . print_r("refund", 1), FILE_APPEND);
-
         $result = new ServiceResult();
 
         $body   = [];
@@ -623,10 +623,6 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
             $payment->setPaid("N");
             $saved = $payment->save()->isSuccess();
         }
-
-        // file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/log_paid.php", "\n" . Date("H:i:s: ") . print_r($response, 1), FILE_APPEND);
-
-        // file_put_contents($_SERVER["DOCUMENT_ROOT"] . "/log_paid.php", "\n" . Date("H:i:s: ") . print_r("refund end", 1), FILE_APPEND);
 
         return $result;
     }
