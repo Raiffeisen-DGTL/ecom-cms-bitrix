@@ -38,8 +38,7 @@ if (CModule::IncludeModule("sale"))
 	}
 	else
 	{
-		$debugInfo = implode("\n", $request->toArray());
-		PaySystem\Logger::addDebugInfo('Pay system not found. Request: '.$debugInfo);
+		PaySystem\Logger::addDebugInfo('Pay system not found for Raiffeisen result request');
 	}
 }
 

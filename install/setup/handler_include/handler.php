@@ -9,7 +9,6 @@ use Bitrix\Sale;
 use Bitrix\Main\Config\Option;
 use Bitrix\Sale\PaySystem;
 use Bitrix\Main\Web\Json;
-use Bitrix\Main\Diag;
 use Bitrix\Sale\Payment;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Type\Date;
@@ -256,11 +255,11 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
             //if ($billInfo) {
             switch ($request->get("transaction")['status']['value']) {
                 case 'SUCCESS':
-                    // Diag\Debug::dumpToFile($request->get("transaction"),  "CALLBACK TRANSACTION",  '/raiffeisenpay_logs.log');
                     $email = $request->get("transaction")['extra']['email'];
                     $orderId = $request->get("transaction")['extra']['orderAccountNumber'];
-                    Diag\Debug::dumpToFile($request->get("transaction")['extra'],  "extra",  '/raiffeisenpay_logs.log');
-                    Diag\Debug::dumpToFile($orderId,  "orderId",  '/raiffeisenpay_logs.log');
+                    $this->log('CALLBACK_SUCCESS', [
+                        'transaction_status' => $request->get("transaction")['status']['value'],
+                    ]);
                     $order = Sale\Order::loadByAccountNumber($orderId);
                     $paymentCollection = $order->getPaymentCollection();
                     foreach ($paymentCollection as $_payment_) {
@@ -287,9 +286,10 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                 $fiscalization     = BusinessValue::getMapping('SELLER_FISCALIZATION', $consumerName)['PROVIDER_VALUE'];
                                 $sellerPaymentMode = BusinessValue::getMapping('SELLER_PAYMENT_MODE', $consumerName)['PROVIDER_VALUE'] ?: 'FULL_PAYMENT';
 
-                                Diag\Debug::dumpToFile($_payment_,  "Payment",  '/raiffeisenpay_logs.log');
-                                Diag\Debug::dumpToFile($_payment_->getField('ACCOUNT_NUMBER'),  "ACCOUNT_NUMBER",  '/raiffeisenpay_logs.log');
-                                Diag\Debug::dumpToFile($fiscalization,  "SELLER_FISCALIZATION",  '/raiffeisenpay_logs.log');
+                                $this->log('PAYMENT_MATCHED', [
+                                    'payment_system_id' => $psID,
+                                    'fiscalization_enabled' => $fiscalization === 'on' ? 'Y' : 'N',
+                                ]);
 
                                 if ($fiscalization === 'on') {
                     
@@ -335,9 +335,9 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                     $raiffeisenOrderId = $request->get("transaction")['orderId'];
 
                                     $postReceiptResult = $client->postReceiptSell($receiptNumber, $email, $bItems, number_format($order->getPrice(), 2, '.', ''), null, $raiffeisenOrderId);
-                                    Diag\Debug::dumpToFile($postReceiptResult,  "postReceiptResult",  '/raiffeisenpay_logs.log');
+                                    $this->log('POST_RECEIPT_RESULT', $this->getSafeReceiptResultLog($postReceiptResult));
                                     $registerReceiptResult = $client->registerReceiptSell($receiptNumber);
-                                    Diag\Debug::dumpToFile($registerReceiptResult,  "registerReceiptResult",  '/raiffeisenpay_logs.log');
+                                    $this->log('REGISTER_RECEIPT_RESULT', $this->getSafeReceiptResultLog($registerReceiptResult));
                                     
                                     $_payment_->setField('PAY_VOUCHER_NUM', $receiptNumber);
                                     $_payment_->setField('PAY_VOUCHER_DATE', Date::createFromTimestamp(time()));
@@ -345,7 +345,10 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                                 }
                             }
                             catch (\Exception $e) {
-                                Diag\Debug::dumpToFile($e,  "Callback Exception",  '/raiffeisenpay_logs.log');
+                                $this->log('CALLBACK_EXCEPTION', [
+                                    'exception' => get_class($e),
+                                    'code' => $e->getCode(),
+                                ]);
                             }
                         }
                     }
@@ -357,8 +360,13 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                     break;
             }
             //$psData['PS_STATUS_CODE'] = $billInfo['status']['value'];
-            if ($request->get('back')) {
-                $data['BACK_URL'] = urldecode($request->get('back'));
+            $backUrl = $request->get('back');
+            if (is_string($backUrl) && self::isSafeBackUrl($backUrl)) {
+                $data['BACK_URL'] = $backUrl;
+            } elseif ($backUrl) {
+                $this->log('INVALID_BACK_URL', [
+                    'reason' => 'Unsafe callback back URL',
+                ]);
             }
             //}
         }
@@ -467,13 +475,23 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
                     $this->sendJsonResponse(['error' => 0]);
                     break;
             }
-        } elseif ($data['BACK_URL']) {
+        } elseif (isset($data['BACK_URL']) && self::isSafeBackUrl($data['BACK_URL'])) {
             LocalRedirect($data['BACK_URL']);
         } else {
             echo 'SUCCESS';
         }
 
         return;
+    }
+
+    public static function isSafeBackUrl($url)
+    {
+        return is_string($url)
+            && $url !== ''
+            && strpos($url, '/') === 0
+            && strpos($url, '//') === false
+            && strpos($url, '\\') === false
+            && preg_match('/[\x00-\x1F\x7F]/', $url) === 0;
     }
 
     /**
@@ -493,14 +511,37 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
     protected function log($type, array $desc)
     {
         if ($this->debug) {
-            CEventLog::Add([
+            $description = json_encode($desc, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($description === false) {
+                $description = 'Unable to encode log description';
+            }
+
+            \CEventLog::Add([
                 'SEVERITY'      => 'DEBUG',
                 'AUDIT_TYPE_ID' => 'PAYMENT_RAIF_' . $type,
                 'MODULE_ID'     => 'ruraiffeisen_raiffeisenpay',
                 'ITEM_ID'       => 1,
-                'DESCRIPTION'   => $desc,
+                'DESCRIPTION'   => $description,
             ]);
         }
+    }
+
+    protected function getSafeReceiptResultLog($receiptResult)
+    {
+        if (!is_array($receiptResult)) {
+            return [
+                'result_type' => is_object($receiptResult) ? get_class($receiptResult) : gettype($receiptResult),
+            ];
+        }
+
+        $safeResult = [];
+        foreach (['status', 'code', 'errorCode', 'message', 'errorMessage'] as $key) {
+            if (isset($receiptResult[$key]) && !is_array($receiptResult[$key]) && !is_object($receiptResult[$key])) {
+                $safeResult[$key] = $receiptResult[$key];
+            }
+        }
+
+        return $safeResult ?: ['result_keys' => implode(',', array_keys($receiptResult))];
     }
 
     /**

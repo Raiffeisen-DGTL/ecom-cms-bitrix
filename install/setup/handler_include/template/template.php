@@ -7,7 +7,6 @@ use Bitrix\Sale;
 use Bitrix\Sale\Payment;
 use Bitrix\Sale\PriceMaths;
 use Bitrix\Main\Config\Option;
-use Bitrix\Main\Diag;
 use Bitrix\Main\Page\Asset;
 use Bitrix\Sale\PaySystem\Manager;
 use Bitrix\Sale\PaySystem\Service;
@@ -19,7 +18,28 @@ Asset::getInstance()->addCss($params['SELLER_STYLES']);
 
 Loc::loadMessages(__FILE__);
 
-$_SERVER["SERVER_NAME"] = 'https://' . SITE_SERVER_NAME;
+$siteHost = defined('SITE_SERVER_NAME') ? SITE_SERVER_NAME : Option::get('main', 'server_name', '');
+$siteHost = preg_replace('#^https?://#i', '', (string) $siteHost);
+$siteHost = explode('/', $siteHost)[0];
+$siteHost = trim($siteHost);
+
+$normalizeReturnPath = static function ($path) {
+    if (
+        !is_string($path)
+        || $path === ''
+        || strpos($path, '/') !== 0
+        || strpos($path, '//') !== false
+        || strpos($path, '\\') !== false
+        || preg_match('/[\x00-\x1F\x7F]/', $path) === 1
+    ) {
+        return '/';
+    }
+
+    return $path;
+};
+
+$successUrl = 'https://' . $siteHost . $normalizeReturnPath($params['BACK_URI_SUCCESS']);
+$failUrl = 'https://' . $siteHost . $normalizeReturnPath($params['BACK_URI_FAIL']);
 
 if (array_key_exists('PAYMENT_SHOULD_PAY', $params)) {
     $params['PAYMENT_SHOULD_PAY'] = PriceMaths::roundPrecision($params['PAYMENT_SHOULD_PAY']);
@@ -70,10 +90,6 @@ $receipt["receiptNumber"]     = $orderID;
 $receipt["customer"]["email"] = $email;
 //$receipt["customer"]["name"] = $userName;
 
-// Diag\Debug::dumpToFile($_SERVER["HTTP_USER_AGENT"],  "HTTP_USER_AGENT",  '/raiffeisenpay_logs.log');
-Diag\Debug::dumpToFile($orderID,  "orderID",  '/raiffeisenpay_logs.log');
-// Diag\Debug::dumpToFile($order,  "Order",  '/raiffeisenpay_logs.log');
-// Diag\Debug::dumpToFile($params['SELLER_FISCALIZATION'],  "SELLER_FISCALIZATION",  '/raiffeisenpay_logs.log');
 if ($params['SELLER_FISCALIZATION'] === 'on') {
     $basket = $order->getBasket();
 
@@ -118,8 +134,6 @@ $receipt["payments"][] = [
 "amount" => $paySum,
 ];
 */
-
-// Diag\Debug::dumpToFile($receipt,  "receipt",  '/raiffeisenpay_logs.log');
 
 if (array_key_exists('ORDER_LIFETIME', $params)) {
     $expPeriod = intval($params["ORDER_LIFETIME"]);
@@ -178,9 +192,9 @@ else {
 <form method="POST" name="redirectToAcsForm" id="form" target="_blank" style="display: none">
     <input name="amount" id="amount" value="<?= $paySum ?>" type="hidden" />
     <input name="orderId" id="orderId" value="<?= $orderID ?>" id="order" type="hidden" />
-    <input name="successUrl" id="successUrl" value="<?= ($_SERVER["REQUEST_SCHEME"] . '://' . $_SERVER["HTTP_HOST"] . $params['BACK_URI_SUCCESS']) ?>"
+    <input name="successUrl" id="successUrl" value="<?= htmlspecialcharsbx($successUrl) ?>"
         type="hidden" />
-    <input name="failUrl" id="failUrl" value="<?= ($_SERVER["REQUEST_SCHEME"] . '://' . $_SERVER["HTTP_HOST"] . $params['BACK_URI_FAIL']) ?>"
+    <input name="failUrl" id="failUrl" value="<?= htmlspecialcharsbx($failUrl) ?>"
         type="hidden" />
     <input name="publicId" id="publicId" value="<?= $params["SELLER_PUBLIC_ID"] ?>" type="hidden" />
     <input name="paymentMethod" id="paymentMethod" value="<?= $params["SELLER_METHOD"] ?>" type="hidden" />
