@@ -144,8 +144,12 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
         if ($body) {
             $reqData = Json::decode($body);
         }
-        // Log notifies from ...
-        $this->log('NOTIFY', ['pid' => $pid, 'reqData' => $body]);
+        // Log only non-personal notification fields. Never write raw callback JSON.
+        $this->log('NOTIFY', [
+            'pid' => $pid,
+            'transaction_id' => isset($reqData['transaction']['id']) ? $reqData['transaction']['id'] : null,
+            'transaction_status' => isset($reqData['transaction']['status']['value']) ? $reqData['transaction']['status']['value'] : null,
+        ]);
         if (isset($reqData) && isset($reqData['transaction']['id'])) {
             $pid = $reqData['transaction']['id'];
             if (!$pid) {
@@ -610,7 +614,8 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
             random_int(0, 0xffffffff)
         );
         $amount   = $refundableSum;
-        $client   = new \Raiffeisen\Ecom\Client($this->secretKey, $this->publicKey, \Raiffeisen\Ecom\Client::HOST_TEST);
+        $host     = $this->debug === 'yes' ? \Raiffeisen\Ecom\Client::HOST_TEST : \Raiffeisen\Ecom\Client::HOST_PROD;
+        $client   = new \Raiffeisen\Ecom\Client($this->secretKey, $this->publicKey, $host);
 
         $response = $client->postOrderRefund($orderId, $refundId, number_format($amount, 2, '.', ''), array("customer" => ["email" => $rsUser['EMAIL'],], "items" => $items));
         if ($response['refundStatus'] == "COMPLETED") {
