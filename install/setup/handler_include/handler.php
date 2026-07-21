@@ -273,7 +273,7 @@ class ruraiffeisen_raiffeisenpayHandler extends PaySystem\ServiceHandler impleme
 
                         $psID = $_payment_->getPaymentSystemId();
 
-                        if ($psID == $payment->getField('PAY_SYSTEM_ID') && $paymentAmount === $requestAmount) {
+                        if ($psID === $payment->getField('PAY_SYSTEM_ID') && $paymentAmount === $requestAmount) {
                             try {
                                 $_payment_->setPaid("Y");
                                 //$setField = $_payment_->setField('PS_INVOICE_ID', $request->get("transaction")['id']);
