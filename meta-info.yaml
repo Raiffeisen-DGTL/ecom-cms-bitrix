@@ -1,0 +1,9 @@
+api_version: 3.0.0
+team_nid: a47
+ail_id: 870
+component:
+  - name: ecom-cms-bitrix
+    description: Плагин для CMS Bitrix
+    type: library
+    lifecycle: production
+    provides_apis: none
